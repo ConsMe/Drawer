@@ -1,3 +1,3 @@
 module.exports = {
-  assetsDir: 'Drawer/dist'
+  publicPath: '/Drawer/dist'
 }
