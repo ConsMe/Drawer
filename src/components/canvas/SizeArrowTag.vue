@@ -64,11 +64,12 @@ export default {
       const insideK = this.border.border.sizeTag.isInside ? -1 : 1;
       let startVec = new Victor(points[0], points[1]);
       let vec = new Victor(points[2] - points[0], points[3] - points[1]);
-      const length = vec.length() - this.arrowLength * 2;
       let angle = vec.angleDeg();
       angle = angle < 0 ? angle + 360 : angle;
       const halfFontSize = this.fontSize / 2;
+      let length = vec.length();
       const lengthText = Math.round(length / this.pxPerMm).toString();
+      length -= this.arrowLength * 2;
       const offset = {
         x: halfFontSize * lengthText.length,
         y: halfFontSize,
