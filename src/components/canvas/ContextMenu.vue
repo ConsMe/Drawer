@@ -36,51 +36,61 @@ export default {
       const { attrs } = this.contextMenuEvent.e.target;
       const { partIndex, borderIndex } = this.contextMenuEvent;
       switch (attrs.type) {
+        case 'part':
+          return [
+            {
+              name: 'Удалить элемент',
+              action: 'deletePart',
+              partIndex,
+            },
+          ];
         case 'lineBorder':
-          items.push(...[
-            {
-              name: 'Вставить точку',
-              action: 'addPoint',
-              borderIndex: this.contextMenuEvent.borderIndex,
-            },
-            {
-              name: 'Сделать выпуклой',
-              isInside: false,
-              action: 'makeBorderCurve',
-              borderIndex: this.contextMenuEvent.borderIndex,
-            },
-            {
-              name: 'Сделать вогнутой',
-              isInside: true,
-              action: 'makeBorderCurve',
-              borderIndex: this.contextMenuEvent.borderIndex,
-            },
-            {
-              name: 'Сделать вырез',
-              isInside: true,
-              action: 'makeBulgeInset',
-              borderIndex: this.contextMenuEvent.borderIndex,
-            },
-            {
-              name: 'Сделать выступ',
-              isInside: false,
-              action: 'makeBulgeInset',
-              borderIndex: this.contextMenuEvent.borderIndex,
-            },
-            {
-              name: 'Добавить/убрать бортик',
-              action: 'toggleSkirting',
-              borderIndex: this.contextMenuEvent.borderIndex,
-            },
-          ]);
-          if (attrs.sizeArrow === 'off') {
+          if (attrs.isClickable) {
+            items.push(...[
+              {
+                name: 'Вставить точку',
+                action: 'addPoint',
+                borderIndex: this.contextMenuEvent.borderIndex,
+              },
+              {
+                name: 'Сделать выпуклой',
+                isInside: false,
+                action: 'makeBorderCurve',
+                borderIndex: this.contextMenuEvent.borderIndex,
+              },
+              {
+                name: 'Сделать вогнутой',
+                isInside: true,
+                action: 'makeBorderCurve',
+                borderIndex: this.contextMenuEvent.borderIndex,
+              },
+              {
+                name: 'Сделать вырез',
+                isInside: true,
+                action: 'makeBulgeInset',
+                borderIndex: this.contextMenuEvent.borderIndex,
+              },
+              {
+                name: 'Сделать выступ',
+                isInside: false,
+                action: 'makeBulgeInset',
+                borderIndex: this.contextMenuEvent.borderIndex,
+              },
+            ]);
+          }
+          items.push({
+            name: 'Добавить/убрать бортик',
+            action: 'toggleSkirting',
+            borderIndex: this.contextMenuEvent.borderIndex,
+          });
+          if (!attrs.sizeTag.isShown && attrs.isHoverable) {
             items.push({
               name: 'Показать размер',
               action: 'showSizeArrow',
               borderIndex: this.contextMenuEvent.borderIndex,
             });
           }
-          if (!this.parts[partIndex].borders[borderIndex].edge) {
+          if (!this.parts[partIndex].borders[borderIndex].edgeTag.isShown) {
             items.push({
               name: 'Добавить кромку',
               action: 'addEdge',
@@ -120,14 +130,14 @@ export default {
               },
             );
           }
-          if (attrs.radiusPosition === 'off') {
+          if (!attrs.radiusTag.isShown) {
             items.push({
               name: 'Показать радиус',
               action: 'showRadius',
               borderIndex: this.contextMenuEvent.borderIndex,
             });
           }
-          if (!this.parts[partIndex].borders[borderIndex].edge) {
+          if (!this.parts[partIndex].borders[borderIndex].edgeTag.isShown) {
             items.push({
               name: 'Добавить кромку',
               action: 'addEdge',
@@ -136,19 +146,21 @@ export default {
           }
           return items;
         case 'point':
-          items.push(...[
-            {
-              name: 'Удалить точку',
-              action: 'deletePoint',
-              pointIndex: this.contextMenuEvent.pointIndex,
-            },
-            {
-              name: 'Сделать вырез',
-              action: 'makeCorderCut',
-              pointIndex: this.contextMenuEvent.pointIndex,
-            },
-          ]);
-          if (!attrs.angleTag) {
+          if (!attrs.isInsetBulge) {
+            items.push(...[
+              {
+                name: 'Удалить точку',
+                action: 'deletePoint',
+                pointIndex: this.contextMenuEvent.pointIndex,
+              },
+              {
+                name: 'Сделать вырез',
+                action: 'makeCorderCut',
+                pointIndex: this.contextMenuEvent.pointIndex,
+              },
+            ]);
+          }
+          if (!attrs.angleTag.isShown) {
             items.push({
               name: 'Показать угол',
               action: 'showAngle',
@@ -168,11 +180,6 @@ export default {
         case 'sizeArrow':
           return [
             {
-              name: 'Отобразить с другой стороны',
-              action: 'showInsideOutside',
-              borderIndex: this.contextMenuEvent.borderIndex,
-            },
-            {
               name: 'Скрыть',
               action: 'hide',
               borderIndex: this.contextMenuEvent.borderIndex,
@@ -180,11 +187,6 @@ export default {
           ];
         case 'radius':
           return [
-            {
-              name: 'Отобразить с другой стороны',
-              action: 'showRadiusOpposite',
-              borderIndex: this.contextMenuEvent.borderIndex,
-            },
             {
               name: 'Скрыть',
               action: 'hide',
@@ -205,6 +207,14 @@ export default {
               name: 'Скрыть',
               action: 'hideEdge',
               borderIndex: this.contextMenuEvent.borderIndex,
+            },
+          ];
+        case 'totalText':
+          return [
+            {
+              name: 'Удалить текст',
+              action: 'deleteTotalText',
+              textIndex: this.contextMenuEvent.textIndex,
             },
           ];
         default:

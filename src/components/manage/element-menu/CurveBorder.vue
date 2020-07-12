@@ -103,6 +103,7 @@ export default {
       }
       this.setRadius();
       this.setBorderLength();
+      this.$store.commit('addLog');
     },
     setRadius() {
       const { i, j } = this.selectedEl;

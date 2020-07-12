@@ -1,20 +1,24 @@
 <template>
-  <div v-if="point.angleTag">
+  <div v-if="point.angleTag.isShown">
     <v-label
       :config="{
         ...params.textPosition,
         rotation: params.angle,
         offset: params.offset,
+        draggable: true,
+        dragBoundFunc: params.dragBoundFunc,
       }"
+      ref="angle"
       @mouseover="over = true"
       @mouseleave="over = false"
-      @contextmenu="setContextMenuEvent">
+      @contextmenu="setContextMenuEvent"
+      @dragend="dragend">
       <v-tag :config="{fill: 'transparent'}" />
       <v-text :config="{
         text: params.angleText,
         fontSize,
         fontFamily: 'Calibri',
-        fill: over ? 'red' : 'black',
+        fill: over ? selectedColor : 'black',
         type: 'angleTag',
       }" />
     </v-label>
@@ -28,6 +32,7 @@
       angle: params.ang2 * (180 / Math.PI) - params.ang1 * (180 / Math.PI),
       rotation: params.ang1 * (180 / Math.PI),
       clockwise: true,
+      dash,
     }" />
   </div>
 </template>
@@ -47,6 +52,7 @@ export default {
     pxPerMm() { return this.$store.state.pxPerMm; },
     fontSize() { return this.$store.state.fontSizeInmM.radius * this.pxPerMm; },
     params() {
+      const distance = this.point.angleTag.distance || 0;
       const border1 = this.part.borders.find((b) => b.id === this.point.bordersId[1]);
       const border2 = this.part.borders.find((b) => b.id === this.point.bordersId[0]);
       let pts = border1.pointsInPx;
@@ -60,16 +66,27 @@ export default {
       vec = vec2.clone().norm().multiply(new Victor(offsetVec, offsetVec));
       const p2Vec = vec.add(startVec);
       const radius = p2Vec.clone().subtract(p1Vec).length() / 2 + 2;
-      const { ang1, ang2, c1 } = this.getCurve(p1Vec.toObject(), p2Vec.toObject(), radius);
-      const angleRad = Math.acos((vec1.dot(vec2)) / (vec1.length() * vec2.length()));
-      const angleText = `${Math.round(angleRad * (180 / Math.PI))} °`;
+      const angle1 = vec2.angleDeg();
+      let angleDeg = vec1.angleDeg() - angle1;
+      if (angleDeg < 0) {
+        angleDeg += 360;
+      }
+      let isOpposite = angleDeg >= 180;
+      if (this.point.angleTag.isOutside) isOpposite = !isOpposite;
+      const { ang1, ang2, c1 } = this.getCurve(p1Vec.toObject(),
+        p2Vec.toObject(), radius, isOpposite);
+      const angleText = `${Math.round(angleDeg)} °`;
       vec = new Victor(p2Vec.x - p1Vec.x, p2Vec.y - p1Vec.y);
       const middlePoingthLength = vec.length() / 2;
       vec = vec.clone().norm()
         .multiply(new Victor(middlePoingthLength, middlePoingthLength)).add(p1Vec);
       const middlePointVec = new Victor(vec.x - c1.x, vec.y - c1.y);
-      const textOffset = radius + offsetVec * 1.2;
+      const textOffset = distance ? distance * this.pxPerMm : radius + offsetVec * 1.2;
+      const originalAngle = middlePointVec.angleDeg();
+      let correctAngle = this.point.angleTag.correctAngle || 0;
+      if (isOpposite) correctAngle += 180;
       const textPosition = middlePointVec.clone().norm()
+        .rotateDeg(correctAngle)
         .multiply(new Victor(textOffset, textOffset))
         .add(new Victor(c1.x, c1.y))
         .toObject();
@@ -78,6 +95,7 @@ export default {
         x: (halfFontSize * angleText.length) / 2,
         y: halfFontSize,
       };
+      const This = this;
       return {
         padding: 0,
         textPosition,
@@ -88,26 +106,40 @@ export default {
         ang2,
         radius,
         c1,
+        originalAngle,
+        angleDeg,
+        isOpposite,
+        pts,
+        dragBoundFunc(pos) {
+          This.dragTag(pos);
+          return this.absolutePosition();
+        },
       };
     },
+    partPosition() { return this.part.position; },
     contextMenuAction() { return this.$store.state.contextMenuAction; },
+    dash() { return this.$store.state.dash; },
+    selectedColor() { return this.$store.state.selectedColor; },
   },
   watch: {
     contextMenuAction(data) {
       if (data.partIndex !== this.partIndex) return;
       if (data.pointIndex !== this.pointIndex) return;
       if (['hide', 'showAngle'].includes(data.action)) {
-        let angleTag;
-        if (data.action === 'hide') {
-          angleTag = false;
-        } else if (data.action === 'showAngle') {
-          angleTag = { x: 0, y: 0 };
-        }
-        this.$store.commit('showHideAngle', {
+        const angleTag = data.action === 'hide' ? {} : { isShown: true, isOutside: false };
+        this.$store.commit('setAngleTagParams', {
           i: data.partIndex,
           j: data.pointIndex,
-          angleTag,
+          ...angleTag,
         });
+        this.$store.commit('addLog');
+      }
+    },
+    over(over) {
+      if (over) {
+        this.$store.commit('setCursor', 'move');
+      } else {
+        this.$store.commit('resetCursor');
       }
     },
   },
@@ -120,10 +152,10 @@ export default {
         pointIndex,
       });
     },
-    getCurve(p1, p2, radius) {
+    getCurve(p1, p2, radius, isOpposite) {
       const pm = { x: 0.5 * (p1.x + p2.x), y: 0.5 * (p1.y + p2.y) };
-      let perpABdx = -(p2.y - p1.y);
-      let perpABdy = p2.x - p1.x;
+      let perpABdx = !isOpposite ? -(p2.y - p1.y) : -(p1.y - p2.y);
+      let perpABdy = !isOpposite ? p2.x - p1.x : p1.x - p2.x;
       const norm = Math.sqrt(perpABdx ** 2 + perpABdy ** 2);
       perpABdx /= norm;
       perpABdy /= norm;
@@ -149,6 +181,29 @@ export default {
         ang1: (Math.PI + Math.abs(1.57 - p1p2Angle) * 2 * m) - ang1,
         ang2: (Math.PI + Math.abs(1.57 - p1p2Angle) * 2 * m) - ang2,
       };
+    },
+    dragTag(pos) {
+      const { pts } = this.params;
+      const x2 = pos.x;
+      const y2 = pos.y;
+      const x3 = this.partPosition.x;
+      const y3 = this.partPosition.y;
+      const vec = new Victor(x2 - (pts[0] + x3), y2 - (pts[1] + y3));
+      const angle = vec.angleDeg();
+      const correctAngle = angle - this.params.originalAngle;
+      const distance = vec.length() / this.pxPerMm;
+      this.$store.commit('setAngleTagParams', {
+        i: this.partIndex,
+        j: this.pointIndex,
+        correctAngle: this.params.isOpposite ? correctAngle + 180 : correctAngle,
+        distance,
+        isShown: true,
+        isOutside: this.point.angleTag.isOutside,
+      });
+    },
+    dragend() {
+      this.$refs.angle.getNode().clearCache();
+      this.$store.commit('addLog');
     },
   },
 };

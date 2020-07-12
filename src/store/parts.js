@@ -5,6 +5,7 @@ const clone = (a) => JSON.parse(JSON.stringify(a));
 export default {
   state: {
     partsInit: [],
+    totalTexts: [],
     refreshSelectedElTrigger: 0,
     defaultEdgeType: 'empty',
   },
@@ -29,6 +30,10 @@ export default {
             part.insetsBulges[index].points.push(...point.c);
             part.insetsBulges[index].pointsInPx.push(...points[i].cInPx);
           }
+          ['radiusTag', 'edgeTag', 'sizeTag'].forEach((tag) => {
+            if (!(tag in borders[i])) borders[i][tag] = {};
+          });
+          if (!('angleTag' in point)) points[i].angleTag = {};
         });
         return part;
       });
@@ -71,6 +76,10 @@ export default {
       if (!id) return {};
       let selectedEl = {};
       getters.parts.some((part, i) => {
+        if (part.id === id) {
+          selectedEl = { i, el: part };
+          return true;
+        }
         let type = 'points';
         let subType = null;
         let j = part.points.findIndex((p) => p.id === id);
@@ -80,19 +89,28 @@ export default {
           j = part.borders.findIndex((p) => p.id === id);
         }
         if (j < 0) {
-          subType = 'edge';
+          subType = 'edgeTag';
           type = 'borders';
-          j = part.borders.findIndex((p) => p.edge && p.edge.id === id);
+          j = part.borders.findIndex((p) => p.edgeTag && p.edgeTag.id === id);
         }
         if (j < 0 && part.insetsBulges) {
           subType = null;
           type = 'insetsBulges';
           j = part.insetsBulges.findIndex((p) => p.id === id);
         }
+        if (j < 0 && part.texts && part.texts.length) {
+          subType = null;
+          type = 'texts';
+          j = part.texts.findIndex((p) => p.id === id);
+        }
         if (j < 0) return false;
         selectedEl = { i, j, el: subType ? part[type][j][subType] : part[type][j] };
         return true;
       });
+      if (!Object.keys(selectedEl).length && state.totalTexts.length) {
+        const index = state.totalTexts.findIndex((t) => t.id === id);
+        if (index >= 0) selectedEl = { i: index, el: state.totalTexts[index] };
+      }
       return selectedEl;
     },
   },
@@ -123,6 +141,9 @@ export default {
         type: 'curveBorder',
         radius,
         isInside: data.isInside,
+        radiusTag: { isShown: true },
+        edgeTag: { isShown: false },
+        sizeTag: { isShown: false },
       }));
     },
     makeBorderLine(state, data) {
@@ -131,6 +152,9 @@ export default {
       delete border.radius;
       delete border.isInside;
       border.type = 'lineBorder';
+      border.radiusTag = { isShown: false };
+      border.edgeTag = { isShown: false };
+      border.sizeTag = { isShown: true };
       Vue.set(state.partsInit[partIndex].borders, borderIndex, border);
     },
     addInsetBulge(state, payload) {
@@ -160,30 +184,64 @@ export default {
       Vue.set(state.partsInit[i].borders[j], 'radius', radius);
     },
     setPartPosition(state, { i, pos }) { Vue.set(state.partsInit[i], 'position', pos); },
-    changeSizeArrow(state, { i, j, sizeArrow }) {
-      Vue.set(state.partsInit[i].borders[j], 'sizeArrow', sizeArrow);
-    },
-    changeRadiusPosition(state, { i, j, radiusPosition }) {
-      Vue.set(state.partsInit[i].borders[j], 'radiusPosition', radiusPosition);
-    },
-    showHideAngle(state, { i, j, angleTag }) {
-      Vue.set(state.partsInit[i].points[j], 'angleTag', angleTag);
-    },
-    addHideEdge(state, payload) {
-      const { i, j, action } = payload;
-      if (action === 'addEdge') {
-        const edge = { edgeType: state.defaultEdgeType, id: payload.id, type: 'edge' };
-        Vue.set(state.partsInit[i].borders[j], 'edge', edge);
-      } else {
-        Vue.delete(state.partsInit[i].borders[j], 'edge');
-      }
-    },
-    setEdgeType(state, { i, j, edgeType }) {
-      Vue.set(state.partsInit[i].borders[j].edge, 'edgeType', edgeType);
-      state.defaultEdgeType = edgeType;
-    },
     toggleSkirting(state, { i, j }) {
       Vue.set(state.partsInit[i].borders[j], 'skirting', !state.partsInit[i].borders[j].skirting);
+    },
+    setRadiusTagParams(state, { i, j, ...payload }) {
+      Vue.set(state.partsInit[i].borders[j], 'radiusTag', payload);
+    },
+    setEdgeTagParams(state, { i, j, ...payload }) {
+      let edgeTag;
+      if (payload.isShown === false) {
+        edgeTag = {};
+      } else {
+        edgeTag = state.partsInit[i].borders[j].edgeTag || {};
+        Object.assign(edgeTag, { edgeType: state.defaultEdgeType, type: 'edge' });
+      }
+      Vue.set(state.partsInit[i].borders[j], 'edgeTag', { ...edgeTag, ...payload });
+      if (payload.edgeType) state.defaultEdgeType = payload.edgeType;
+    },
+    setSizeTagParams(state, { i, j, ...payload }) {
+      Vue.set(state.partsInit[i].borders[j], 'sizeTag', payload);
+    },
+    setAngleTagParams(state, { i, j, ...payload }) {
+      Vue.set(state.partsInit[i].points[j], 'angleTag', payload);
+    },
+    setPartFill(state, { i, fill }) {
+      Vue.set(state.partsInit[i], 'fill', fill);
+    },
+    deletePart(state, partIndex) {
+      state.partsInit.splice(partIndex, 1);
+    },
+    addTextBlock(state, payload) {
+      const { i, ...params } = payload;
+      if (payload.type === 'totalText') {
+        state.totalTexts.push({ ...params });
+      } else {
+        if (!state.partsInit[i].texts) Vue.set(state.partsInit[i], 'texts', []);
+        state.partsInit[i].texts.push({ ...params });
+      }
+    },
+    setTextBlock(state, payload) {
+      if (payload.type === 'totalText') {
+        Vue.set(state.totalTexts[payload.i], 'text', payload.text);
+      } else {
+        Vue.set(state.partsInit[payload.i].texts[payload.j], 'text', payload.text);
+      }
+    },
+    deleteTextBlock(state, payload) {
+      if (payload.type === 'totalText') {
+        state.totalTexts.splice(payload.i, 1);
+      } else {
+        state.partsInit[payload.i].texts.splice(payload.j, 1);
+      }
+    },
+    setTextParams(state, { i, j, ...payload }) {
+      if (payload.type === 'totalText') {
+        Vue.set(state.totalTexts, i, payload);
+      } else {
+        Vue.set(state.partsInit[i].texts[payload.j], 'x', payload.text);
+      }
     },
   },
   actions: {
@@ -200,5 +258,10 @@ export default {
     },
     changePoint({ commit }, payload) { commit('changePoint', payload); },
     changeRadius({ commit }, payload) { commit('changeRadius', payload); },
+    addTextBlock({ commit }, payload) {
+      commit('addTextBlock', payload);
+      commit('setSelectedElId', payload.id);
+      commit('setTextEditMode', true);
+    },
   },
 };

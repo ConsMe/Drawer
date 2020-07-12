@@ -1,7 +1,5 @@
 <template>
   <div>
-    <!-- fill: point.pBId.includes(currentElId) || point.pBId.includes(selectedElId)
-          ? 'red' : 'transparent', -->
     <v-circle
       v-for="(point, index) in allPoints"
       :key="point.id"
@@ -11,9 +9,9 @@
         y: point.cInPx[1],
         radius,
         fill: [currentElId, selectedElId].includes(point.id)
-          ? 'red' : 'transparent',
-        draggable: true,
+          ? selectedColor : 'transparent',
         angleTag: point.angleTag,
+        isInsetBulge: !!point.insetBulgeId,
       }"
       @mouseover="point.isClickable ? $store.commit('setCurrentEl', point.id) : ''"
       @mouseleave="point.isClickable ? $store.commit('setCurrentEl', null) : ''"
@@ -50,11 +48,13 @@ export default {
       return this.points.map((point) => {
         const pt = {
           ...point,
-          isClickable: !['inset', 'bulge'].includes(point.subType),
+          // isClickable: !['inset', 'bulge'].includes(point.subType),
+          isClickable: true,
         };
         return pt;
       });
     },
+    selectedColor() { return this.$store.state.selectedColor; },
   },
   watch: {
     contextMenuAction(data) {
@@ -91,9 +91,11 @@ export default {
         border: { id: this.getId(), type: 'lineBorder' },
       });
       this.$store.commit('addPoint', { partIndex, pointIndex: index + 1, point: { id: this.getId(), c: pt3 } });
+      this.$store.commit('addLog');
     },
     deletePoint(data) {
       this.$store.commit('deletePoint', data);
+      this.$store.commit('addLog');
     },
     makeCorderCut(data) {
       const { pointIndex, partIndex } = data;
@@ -118,7 +120,7 @@ export default {
           this.$store.dispatch('changePoint', payload);
           return;
         }
-        const border = { id: this.getId(), type: 'lineBorder' };
+        const border = { id: this.getId(), type: 'lineBorder', sizeTag: { isShown: true } };
         this.$store.commit('addBorder', {
           partIndex,
           borderIndex: pointIndex + index,
@@ -131,6 +133,7 @@ export default {
           point: { id: newPointId, c: p },
         });
       });
+      this.$store.commit('addLog');
     },
   },
 };

@@ -5,20 +5,21 @@
       :key="b.border.id"
       :config="{
         ...b.config,
-        stroke: [currentElId, selectedElId].includes(b.border.id) ? 'red' : 'black',
+        stroke: [currentElId, selectedElId].includes(b.border.id) || selectedElId === part.id
+          ? selectedColor : 'black',
       }"
       :ref="`border${b.border.id}`"
-      @contextmenu="b.config.isClickable
-        ? setContextMenuEvent($event, b.config.allBordersIndex) : ''"
-      @mouseover="b.config.isClickable ? $store.commit('setCurrentEl', b.border.id) : ''"
-      @mouseleave="b.config.isClickable ? $store.commit('setCurrentEl', null) : ''"
+      @contextmenu="setContextMenuEvent($event, b.config.allBordersIndex)"
+      @mouseover="$store.commit('setCurrentEl', b.border.id)"
+      @mouseleave="$store.commit('setCurrentEl', null)"
       @click="b.config.isClickable ? $store.commit('setSelectedElId', b.border.id) : ''" />
     <v-arc
       v-for="b in curveBorders"
       :key="b.border.id"
       :config="{
         ...b.config,
-        stroke: [currentElId, selectedElId].includes(b.border.id) ? 'red' : 'black',
+        stroke: [currentElId, selectedElId].includes(b.border.id) || selectedElId === part.id
+          ? selectedColor : 'black',
       }"
       :ref="`border${b.border.id}`"
       @contextmenu="setContextMenuEvent($event, b.config.allBordersIndex)"
@@ -29,16 +30,19 @@
       v-for="b in lineBorders"
       :key="`a${b.border.id}`"
       :border="b"
-      :partIndex="partIndex" />
+      :partIndex="partIndex"
+      :part="part" />
     <radius-tag v-for="b in curveBorders"
       :key="`c${b.border.id}`"
       :border="b"
-      :partIndex="partIndex" />
+      :partIndex="partIndex"
+      :part="part" />
     <edges
       v-for="(b) in [...lineBorders, ...curveBorders]"
       :key="`e${b.border.id}`"
       :border="b"
-      :partIndex="partIndex" />
+      :partIndex="partIndex"
+      :part="part" />
   </div>
 </template>
 
@@ -87,7 +91,8 @@ export default {
           hitStrokeWidth: 5,
           allBordersIndex: border.allBordersIndex,
           isClickable: !['inset', 'bulge'].includes(border.subType),
-          sizeArrow: border.sizeArrow,
+          // isHoverable: !['inset', 'bulge'].includes(border.subType) || !border.sizeTag.isShown,
+          sizeTag: border.sizeTag,
         };
         return { config, border };
       });
@@ -117,13 +122,14 @@ export default {
           angle: c.ang2 * (180 / Math.PI) - c.ang1 * (180 / Math.PI),
           rotation: c.ang1 * (180 / Math.PI),
           clockwise: c.isInside,
-          radiusPosition: border.radiusPosition,
+          radiusTag: border.radiusTag,
         };
         return { config, border };
       });
     },
     contextMenuAction() { return this.$store.state.contextMenuAction; },
     refreshSelectedElTrigger() { return this.$store.state.parts.refreshSelectedElTrigger; },
+    selectedColor() { return this.$store.state.selectedColor; },
   },
   watch: {
     contextMenuAction(data) {
@@ -132,10 +138,12 @@ export default {
         this.makeBorderCurve(data);
       } else if (data.action === 'makeBorderLine') {
         this.$store.dispatch('makeBorderLine', data);
+        this.$store.commit('addLog');
       } else if (data.action === 'makeBulgeInset') {
         this.makeBulgeInset(data);
       } else if (data.action === 'toggleSkirting') {
         this.$store.commit('toggleSkirting', { i: data.partIndex, j: data.borderIndex });
+        this.$store.commit('addLog');
       }
     },
     refreshSelectedElTrigger() {
@@ -152,6 +160,7 @@ export default {
       const borderLength = Math.sqrt((pts[2] - pts[0]) ** 2 + (pts[3] - pts[1]) ** 2);
       const radius = data.isInside ? borderLength : borderLength / 2 + 2;
       this.$store.dispatch('makeBorderCurve', Object.assign(data, { radius }));
+      this.$store.commit('addLog');
     },
     makeBulgeInset(data) {
       const pts = this.clone(this.part.borders[data.borderIndex].points);
@@ -179,7 +188,7 @@ export default {
       const pointsId = [];
       const insetBulgeId = this.getId();
       newPoints.forEach((p, index) => {
-        const border = { id: this.getId(), type: 'lineBorder' };
+        const border = { id: this.getId(), type: 'lineBorder', sizeTag: { isShown: true } };
         if (index < 3) border.subType = subType;
         this.$store.commit('addBorder', {
           partIndex,
@@ -198,6 +207,7 @@ export default {
       const insetBulge = { partIndex, pointsId, id: insetBulgeId };
       this.$store.commit('addInsetBulge', { ...insetBulge, type: subType, depth });
       this.$store.commit('setSelectedElId', insetBulgeId);
+      this.$store.commit('addLog');
     },
   },
 };

@@ -17,7 +17,7 @@ export default {
     ConfirmModal,
   },
   created() {
-    this.$store.dispatch('downloadEdges');
+    this.$store.dispatch('downloadImages');
   },
 };
 </script>
@@ -25,6 +25,9 @@ export default {
 <style lang="scss">
 @import "~bootstrap/scss/bootstrap";
 @import '~toastr/toastr.scss';
+@import '~quill/dist/quill.core.css';
+@import '~quill/dist/quill.snow.css';
+@import '~quill/dist/quill.bubble.css';
 
 .toast {
   opacity: 1 !important;

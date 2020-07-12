@@ -88,6 +88,7 @@ export default {
         const depthPoints = this.points[this.element.type === 'inset' ? 'in' : 'out'];
         this.setDepth(depthPoints, this.depthInMm, this.element.depth);
       }
+      this.$store.commit('addLog');
     },
     setPoints(pts, newLength, currentLength) {
       let startVec = new Victor(pts[0].c[0], pts[0].c[1]);

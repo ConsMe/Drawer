@@ -20,6 +20,17 @@ export default {
   },
   mounted() {
     this.isMounted = true;
+    // const ctrl = ['ControlLeft', 'ControlRight'];
+    // window.addEventListener('keydown', (e) => {
+    //   if (ctrl.includes(e.code)) {
+    //     this.$store.commit('changeControlPressed', true);
+    //   }
+    // });
+    // window.addEventListener('keyup', (e) => {
+    //   if (ctrl.includes(e.code)) {
+    //     this.$store.commit('changeControlPressed', false);
+    //   }
+    // });
   },
 };
 </script>

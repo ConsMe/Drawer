@@ -21,13 +21,14 @@ export default {
     insetsBulges() { return this.part.insetsBulges; },
     pxPerMm() { return this.$store.state.pxPerMm; },
     dash() { return [this.pxPerMm * 30, this.pxPerMm * 15]; },
+    selectedColor() { return this.$store.state.selectedColor; },
     configs() {
       return this.insetsBulges.map((iB) => ({
         id: iB.id,
         points: iB.pointsInPx,
         closed: true,
         dash: this.dash,
-        stroke: 'red',
+        stroke: this.selectedColor,
         type: iB.type,
       }));
     },

@@ -1,38 +1,36 @@
 <template>
-  <v-group
-    :config="groupConfig"
-    @dragend="log">
-    <v-shape :config="{
-      ...partShapeConfig,
-      fill: [currentElId, selectedElId].includes(partShapeConfig.id)
-        ? 'rgba(0,0,0,0.2)' : '#80808054',
-    }"
-    @mouseover="$store.commit('setCurrentEl', partShapeConfig.id)"
-    @mouseleave="$store.commit('setCurrentEl', null)" />
-    <insets-bulges
-      :part="part"
-      :partIndex="partIndex"
-      v-if="part.insetsBulges && part.insetsBulges.length" />
-    <borders
-      :part="part"
-      :partIndex="partIndex"
-      :curves="curves" />
-    <points :points="part.points" :partIndex="partIndex" :part="part" />
-    <!-- <v-rect :config="{
-      x: myBB.absolute.x1,
-      y: myBB.absolute.y1,
-      height: myBB.height,
-      width: myBB.width,
-      stroke: 'green',
-      strokeWidth: 2,
-    }" /> -->
-  </v-group>
+  <div>
+    <v-group
+      :config="groupConfig"
+      @dragend="log">
+      <v-shape :config="{
+        ...partShapeConfig,
+        fill: fill.color,
+        fillPatternImage: fill.image,
+        fillPriority: 'pattern',
+      }"
+      @mouseover="$store.commit('setCurrentEl', partShapeConfig.id)"
+      @mouseleave="$store.commit('setCurrentEl', null)"
+      @click="$store.commit('setSelectedElId', part.id)"
+      @contextmenu="setContextMenuEvent" />
+      <insets-bulges
+        :part="part"
+        :partIndex="partIndex"
+        v-if="part.insetsBulges && part.insetsBulges.length" />
+      <borders
+        :part="part"
+        :partIndex="partIndex"
+        :curves="curves" />
+      <points :points="part.points" :partIndex="partIndex" :part="part" />
+    </v-group>
+  </div>
 </template>
 
 <script>
 import Borders from './Borders.vue';
 import Points from './Points.vue';
 import InsetsBulges from './InsetsBulges.vue';
+import fills from '../../modules/fills';
 
 export default {
   props: ['partIndex', 'part'],
@@ -40,7 +38,11 @@ export default {
     return {
     };
   },
-  components: { Borders, Points, InsetsBulges },
+  components: {
+    Borders,
+    Points,
+    InsetsBulges,
+  },
   computed: {
     selectedElId() { return this.$store.state.selectedElId; },
     currentElId() { return this.$store.state.currentElId; },
@@ -85,9 +87,10 @@ export default {
       return curves;
     },
     partShapeConfig() {
-      const { points, borders } = this.part;
+      const { points, borders, type } = this.part;
       const { curves } = this;
       return {
+        type,
         id: this.part.id,
         sceneFunc(ctx, shape) {
           ctx.beginPath();
@@ -114,7 +117,8 @@ export default {
       const bb = this.otherPartsBB;
       const my = this.myBB.absolute;
       let block = null;
-      return {
+      const config = {
+        type: 'part',
         draggable: true,
         dragBoundFunc(pos) {
           const newPos = pos;
@@ -144,14 +148,47 @@ export default {
           return newPos;
         },
       };
+      if (this.part.position) {
+        Object.assign(config, { ...this.part.position });
+      }
+      return config;
+    },
+    fill() {
+      const { fill } = this.$store.state.parts.partsInit[this.partIndex];
+      const fillParams = { color: null, image: null };
+      if (!fill) return fillParams;
+      if (fill === 'color') {
+        fillParams.color = '#80808054';
+      } else {
+        fillParams.image = fills({ type: fill, color: 'rgb(200,200,200)' });
+      }
+      return fillParams;
+    },
+    contextMenuAction() { return this.$store.state.contextMenuAction; },
+  },
+  watch: {
+    contextMenuAction(data) {
+      if (data.partIndex !== this.partIndex) return;
+      if (data.action === 'deletePart') {
+        setTimeout(() => {
+          this.$store.commit('deletePart', data.partIndex);
+          this.$store.commit('addLog');
+        }, 0);
+      }
     },
   },
   methods: {
     log(e) {
+      if (e.target.attrs.type !== 'part') return;
       this.setPartPosition(e.target.getPosition());
     },
     setPartPosition(pos) {
       this.$store.commit('setPartPosition', { i: this.partIndex, pos });
+      this.$store.commit('addLog');
+    },
+    setContextMenuEvent(e) {
+      const { partIndex } = this;
+      this.$store.commit('setContextMenuEvent', { e, partIndex });
     },
   },
 };

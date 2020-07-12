@@ -41,7 +41,8 @@ export default {
   watch: {
     selectedType(nv) {
       const { i, j } = this.selectedEl;
-      this.$store.commit('setEdgeType', { i, j, edgeType: nv });
+      this.$store.commit('setEdgeTagParams', { i, j, edgeType: nv });
+      this.$store.commit('addLog');
     },
   },
 };

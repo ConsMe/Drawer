@@ -144,6 +144,7 @@ export default {
           });
         });
       }
+      this.$store.commit('addLog');
     },
     getLinearEquation() {
       // y = mx + n - формула линейного уравнения
