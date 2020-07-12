@@ -114,8 +114,8 @@ export default {
         radiusPosition: 'usual',
       }
     ));
-    this.$store.commit('addPart', part);
-    this.$store.commit('addLog');
+    // this.$store.commit('addPart', part);
+    // this.$store.commit('addLog');
     $(this.$refs.nocontext).on('contextmenu', (e) => e.preventDefault());
     this.$store.commit('setStage', this.$refs.stage.getNode());
     window.addEventListener('keypress', (e) => {
