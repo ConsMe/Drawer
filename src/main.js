@@ -13,7 +13,6 @@ import {
   faFont,
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import VueQuillEditor from 'vue-quill-editor';
 import App from './App.vue';
 import store from './store';
 
@@ -23,7 +22,6 @@ library.add(faArrowsAltH, faLongArrowAltRight, faFont,
 Vue.component('font-awesome-icon', FontAwesomeIcon);
 Vue.config.productionTip = false;
 Vue.use(VueKonva);
-Vue.use(VueQuillEditor, {});
 
 Vue.mixin({
   methods: {

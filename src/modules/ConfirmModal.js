@@ -1,8 +1,11 @@
 import $ from 'jquery';
 
-export default ({ body, actions, input }) => new Promise((resolve) => {
+export default (payload) => new Promise((resolve) => {
+  const { body, actions, input } = payload;
+  const { title } = payload;
   const confirmModal = $('#confirm_modal');
   $(confirmModal).find('.modal-body').text(body);
+  $(confirmModal).find('.modal-title').text(title);
   const allActions = actions || [
     {
       action: '0',

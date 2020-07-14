@@ -31,8 +31,10 @@
 
 <script>
 import Victor from 'victor';
+import toastr from 'toastr';
 import getId from '../../mixins/getId';
 import AngleTag from './AngleTag.vue';
+import confirmModal from '../../modules/ConfirmModal';
 
 export default {
   mixins: [getId],
@@ -59,12 +61,15 @@ export default {
   watch: {
     contextMenuAction(data) {
       if (data.partIndex !== this.partIndex) return;
+      this.$store.commit('setContextMenuEvent', null);
       if (data.action === 'addPoint') {
         this.addPoint(data);
       } else if (data.action === 'deletePoint') {
         this.deletePoint(data);
       } else if (data.action === 'makeCorderCut') {
         this.makeCorderCut(data);
+      } else if (data.action === 'makeRounded') {
+        this.makeRounded(data);
       }
     },
   },
@@ -133,6 +138,46 @@ export default {
           point: { id: newPointId, c: p },
         });
       });
+      this.$store.commit('addLog');
+    },
+    async makeRounded(data) {
+      let payload = { body: 'Введите радиус', title: 'Закруглить угол' };
+      payload = { ...payload, input: { type: 'number', placeholder: 'радиус в мм' } };
+      payload.actions = [
+        { action: '0', style: 'secondary', text: 'Отмена' },
+        { action: '1', style: 'primary', text: 'Применить' },
+      ];
+      const confirmation = await confirmModal(payload);
+      if (!confirmation) return;
+      const radius = parseInt(confirmation, 10);
+      if (Number.isNaN(radius)) {
+        toastr.warning('Радиус введен неверно');
+      }
+      const j2 = data.pointIndex;
+      const j1 = j2 > 0 ? j2 - 1 : this.points.length - 1;
+      const border1 = this.part.borders[j1];
+      const pts1 = border1.points;
+      const border2 = this.part.borders[j2];
+      const pts2 = border2.points;
+      const startVec = new Victor(pts1[2], pts1[3]);
+      const vec1 = new Victor(pts1[0] - pts1[2], pts1[1] - pts1[3]);
+      const newPoint1 = vec1.norm().multiply(new Victor(radius, radius)).add(startVec).toArray();
+      const vec2 = new Victor(pts2[2] - pts2[0], pts2[3] - pts2[1]);
+      const newPoint2 = vec2.norm().multiply(new Victor(radius, radius)).add(startVec).toArray();
+      const { partIndex, pointIndex } = data;
+      this.$store.commit('addBorder', {
+        partIndex,
+        borderIndex: j2 + 1,
+        border: { id: this.getId(), type: 'lineBorder' },
+      });
+      this.$store.commit('addPoint', {
+        partIndex,
+        pointIndex: j2 + 1,
+        point: { id: this.getId(), c: newPoint2 },
+      });
+      this.$store.commit('movePoint', { pointIndex, partIndex, c: newPoint1 });
+      const params = { borderIndex: j2, radius, isInside: false };
+      this.$store.dispatch('makeBorderCurve', { ...params, partIndex });
       this.$store.commit('addLog');
     },
   },

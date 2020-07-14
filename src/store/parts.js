@@ -125,7 +125,8 @@ export default {
       state.partsInit[partIndex].points.splice(pointIndex, 0, point);
     },
     addBorder(state, { partIndex, borderIndex, border }) {
-      state.partsInit[partIndex].borders.splice(borderIndex, 0, border);
+      const sizeTag = border.sizeTag || { isShown: true };
+      state.partsInit[partIndex].borders.splice(borderIndex, 0, { ...border, sizeTag });
     },
     deleteBorder(state, { partIndex, borderIndex }) {
       state.partsInit[partIndex].borders.splice(borderIndex, 1);

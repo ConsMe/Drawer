@@ -101,7 +101,8 @@ export default {
       const radiuses = this.checkIfNeedFixCurvesRadiuses(newCoords, i);
       if (radiuses.length) {
         const body = 'При изменении данной длины будут увеличены радиус(ы) прилегающих выпуклых/вогнутых линий. Продолжить?';
-        const confirmation = await confirmModal({ body });
+        const title = 'Подтверждение';
+        const confirmation = await confirmModal({ body, title });
         if (!confirmation) return;
       }
       if (radiuses.length) {

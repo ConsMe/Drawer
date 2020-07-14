@@ -145,29 +145,44 @@ export default {
             });
           }
           return items;
-        case 'point':
-          if (!attrs.isInsetBulge) {
-            items.push(...[
+        case 'point': {
+          const part = this.parts[partIndex];
+          const j2 = this.contextMenuEvent.pointIndex;
+          const j1 = j2 > 0 ? j2 - 1 : part.points.length - 1;
+          const border1 = part.borders[j1];
+          const border2 = part.borders[j2];
+          if (border1.type === 'lineBorder' && border2.type === 'lineBorder') {
+            if (!attrs.isInsetBulge) {
+              items.push(...[
+                {
+                  name: 'Удалить точку',
+                  action: 'deletePoint',
+                  pointIndex: this.contextMenuEvent.pointIndex,
+                },
+                {
+                  name: 'Сделать вырез',
+                  action: 'makeCorderCut',
+                  pointIndex: this.contextMenuEvent.pointIndex,
+                },
+              ]);
+            }
+            items.push(
               {
-                name: 'Удалить точку',
-                action: 'deletePoint',
+                name: 'Закруглить угол',
+                action: 'makeRounded',
                 pointIndex: this.contextMenuEvent.pointIndex,
               },
-              {
-                name: 'Сделать вырез',
-                action: 'makeCorderCut',
+            );
+            if (!attrs.angleTag.isShown) {
+              items.push({
+                name: 'Показать угол',
+                action: 'showAngle',
                 pointIndex: this.contextMenuEvent.pointIndex,
-              },
-            ]);
-          }
-          if (!attrs.angleTag.isShown) {
-            items.push({
-              name: 'Показать угол',
-              action: 'showAngle',
-              pointIndex: this.contextMenuEvent.pointIndex,
-            });
+              });
+            }
           }
           return items;
+        }
         case 'inset':
         case 'bulge':
           return [

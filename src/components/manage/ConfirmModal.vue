@@ -12,14 +12,12 @@
     <div class="modal-dialog modal-dialog-centered" role="document">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Подтверждение</h5>
+          <h5 class="modal-title"></h5>
           <button type="button" class="close" data-dismiss="modal" aria-label="Close">
             <span aria-hidden="true">&times;</span>
           </button>
         </div>
-        <div class="modal-body" style="white-space: pre-wrap;">
-          <div class="text"></div>
-          <div class="input mt-3"></div>
+        <div class="modal-body text-left" style="white-space: pre-wrap;">
         </div>
         <div class="modal-footer">
         </div>
@@ -38,9 +36,20 @@ export default {
     };
   },
   mounted() {
-    $(this.$refs.modal).on('show.bs.modal', () => {
-      this.result = 0;
-    });
+    $(this.$refs.modal)
+      .on('show.bs.modal', () => {
+        this.result = 0;
+        if ($(this.$refs.modal).find('input').length) {
+          setTimeout(() => {
+            $(this.$refs.modal).find('input').trigger('focus');
+          }, 0);
+        }
+      })
+      .on('keypress', 'input', (e) => {
+        if (['Enter', 'NumpadEnter'].includes(e.code)) {
+          $(this.$refs.modal).find('.modal-footer > button[data-action=1]').click();
+        }
+      });
     $(this.$refs.modal).on('click', '.modal-footer > button', (e) => {
       this.result = Number($(e.target).attr('data-action'));
       setTimeout(() => {
