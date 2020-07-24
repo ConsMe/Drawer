@@ -55,19 +55,21 @@ export default {
     };
   },
   computed: {
-    parts() { return this.$store.getters.parts; },
     selectedEl() { return this.$store.getters.selectedEl; },
+    part() { return this.$store.state.parts.partsInit[this.selectedEl.i]; },
     element() { return this.selectedEl.el; },
     elementId() { return this.element.id; },
     pxPerMm() { return this.$store.state.pxPerMm; },
     points() {
-      let pts = this.clone(this.element.points);
-      const { pointsId } = this.element;
-      pts = [
-        { x: pts[0], y: pts[1], id: pointsId[0] },
-        { x: pts[2], y: pts[3], id: pointsId[1] },
-      ].sort((p1, p2) => p1.x - p2.x);
-      if (pts[0].x === pts[1].x) pts = pts.sort((p1, p2) => p1.y - p2.y);
+      const curIndex = this.selectedEl.j;
+      const nextIndex = curIndex < this.part.points.length - 1 ? curIndex + 1 : 0;
+      const p1 = this.part.points[curIndex];
+      const p2 = this.part.points[nextIndex];
+      const pts = [
+        { x: p1.c[0], y: p1.c[1], id: p1.id },
+        { x: p2.c[0], y: p2.c[1], id: p2.id },
+      ].sort((pt1, pt2) => pt1.x - pt2.x);
+      if (pts[0].x === pts[1].x) pts.sort((pt1, pt2) => pt1.y - pt2.y);
       return pts;
     },
     currentLengthInMm() {
@@ -137,20 +139,18 @@ export default {
         newCoords.push(p);
       });
       const { i } = this.selectedEl;
-      const radiuses = this.checkIfNeedFixCurvesRadiuses(newCoords, i);
+      const radiuses = this.checkIfNeedFixCurvesRadiuses(newCoords);
       if (radiuses.length) {
         const body = 'При изменении данной длины будут увеличены радиус(ы) прилегающих выпуклых/вогнутых линий. Продолжить?';
         const title = 'Подтверждение';
         const confirmation = await confirmModal({ body, title });
         if (!confirmation) return;
-      }
-      if (radiuses.length) {
         radiuses.forEach((r) => {
           const { j, radius } = r;
           this.$store.dispatch('changeRadius', { i, j, radius });
         });
       }
-      this.parts[i].points.some((point, j) => {
+      this.part.points.some((point, j) => {
         const index = newCoords.findIndex((p) => p.id === point.id);
         if (index >= 0) {
           this.$store.dispatch('changePoint', {
@@ -169,22 +169,31 @@ export default {
       const n = -pts[0].x * m + pts[0].y;
       return { m, n };
     },
-    checkIfNeedFixCurvesRadiuses(pts, i) {
-      const ids = pts.map((p) => p.id);
+    checkIfNeedFixCurvesRadiuses(pts) {
       const radiuses = [];
-      this.parts[i].borders.some((border, j) => {
-        if (border.type !== 'curveBorder') return false;
-        const pointIdIndex = border.pointsId.findIndex((id) => ids.includes(id));
-        if (pointIdIndex < 0) return false;
-        const p1 = pts.find((p) => p.id === border.pointsId[pointIdIndex]);
-        const p2 = pointIdIndex === 0
-          ? { x: border.points[2], y: border.points[3] }
-          : { x: border.points[0], y: border.points[1] };
-        const minRadius = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2) / 2 + 2;
-        if (border.radius >= minRadius) return false;
-        radiuses.push({ j, radius: minRadius });
-        return true;
-      });
+      const { borders, points } = this.part;
+      let curIndex = this.selectedEl.j;
+      const prevIndex = curIndex > 0 ? curIndex - 1 : borders.length - 1;
+      const prevBorder = borders[prevIndex];
+      if (prevBorder.type === 'curveBorder') {
+        const p1 = { x: points[prevIndex].c[0], y: points[prevIndex].c[1] };
+        const p2 = pts.find((p) => p.id === points[curIndex].id);
+        if (p2) {
+          const minRadius = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2) / 2 + 2;
+          if (prevBorder.radius < minRadius) radiuses.push({ j: prevIndex, radius: minRadius });
+        }
+      }
+      curIndex = curIndex < borders.length - 1 ? curIndex + 1 : 0;
+      const nextIndex = curIndex < borders.length - 1 ? curIndex + 1 : 0;
+      const nextBorder = borders[curIndex];
+      if (nextBorder.type === 'curveBorder') {
+        const p1 = { x: points[nextIndex].c[0], y: points[nextIndex].c[1] };
+        const p2 = pts.find((p) => p.id === points[curIndex].id);
+        if (p2) {
+          const minRadius = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2) / 2 + 2;
+          if (nextBorder.radius < minRadius) radiuses.push({ j: curIndex, radius: minRadius });
+        }
+      }
       return radiuses;
     },
   },

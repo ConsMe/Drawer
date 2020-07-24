@@ -60,6 +60,7 @@ export default {
     pxPerMm() { return this.$store.state.pxPerMm; },
     fontSize() { return this.$store.state.fontSizeInmM.sizeArrow * this.pxPerMm; },
     params() {
+      // console.log(this.border.border.id);
       const { points } = this.border.config;
       const insideK = this.border.border.sizeTag.isInside ? -1 : 1;
       let startVec = new Victor(points[0], points[1]);
@@ -131,12 +132,10 @@ export default {
     contextMenuAction(data) {
       if (data.partIndex !== this.partIndex) return;
       if (data.borderIndex !== this.border.config.allBordersIndex) return;
-      if (['hide', 'showSizeArrow'].includes(data.action)) {
-        const sizeTag = data.action === 'hide' ? {} : { isShown: true };
+      if (data.action === 'hideSizeArrow') {
         this.$store.commit('setSizeTagParams', {
           i: data.partIndex,
           j: data.borderIndex,
-          ...sizeTag,
         });
         this.$store.commit('addLog');
       }

@@ -43,13 +43,14 @@ export default {
     };
   },
   computed: {
-    parts() { return this.$store.getters.parts; },
     selectedEl() { return this.$store.getters.selectedEl; },
+    part() { return this.$store.state.parts.partsInit[this.selectedEl.i]; },
     element() { return this.selectedEl.el; },
     points() {
-      const points = this.element.pointsId.map((id, i) => (
-        { id, c: [this.element.points[i * 2], this.element.points[i * 2 + 1]] }
-      ));
+      const points = this.element.pointsId.map((id) => {
+        const point = this.part.points.find((p) => p.id === id);
+        return { id, c: point.c };
+      });
       return {
         out: this.element.type === 'inset' ? [points[0], points[3]] : [points[1], points[2]],
         in: this.element.type === 'inset' ? [points[1], points[2]] : [points[0], points[3]],
@@ -105,7 +106,7 @@ export default {
     setPoint(point) {
       const payload = {
         i: this.selectedEl.i,
-        j: this.parts[this.selectedEl.i].points.findIndex((p) => p.id === point.id),
+        j: this.part.points.findIndex((p) => p.id === point.id),
         point: point.c,
       };
       this.$store.dispatch('changePoint', payload);

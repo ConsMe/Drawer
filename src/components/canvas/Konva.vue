@@ -22,7 +22,7 @@
             v-for="(part, i) in parts"
             :key="part.id"
             :partIndex="i"
-            :part="part" />
+            :partInit="part" />
           <total-text
             v-for="(text, i) in totalTexts"
             :key="text.id"
@@ -62,7 +62,7 @@ export default {
   },
   computed: {
     contextMenuAction() { return this.$store.state.contextMenuAction; },
-    parts() { return this.$store.getters.parts; },
+    parts() { return this.$store.state.parts.partsInit; },
     totalTexts() { return this.$store.state.parts.totalTexts; },
     canvasHeightInMm() { return this.$store.state.canvasHeightInMm; },
     canvasWidthInMm() { return this.$store.state.canvasWidthInMm; },

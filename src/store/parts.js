@@ -6,38 +6,11 @@ export default {
   state: {
     partsInit: [],
     totalTexts: [],
+    boundingBoxes: [],
     refreshSelectedElTrigger: 0,
     defaultEdgeType: 'empty',
   },
   getters: {
-    parts(state, getters, rootState) {
-      return state.partsInit.map((partInit) => {
-        const part = clone(partInit);
-        const { points, borders } = part;
-        const { pxPerMm } = rootState;
-        points.forEach((point, i) => {
-          const next = i < points.length - 1 ? i + 1 : 0;
-          borders[i].points = [...point.c, ...points[next].c];
-          borders[i].pointsId = [point.id, points[next].id];
-          const prev = i ? i - 1 : points.length - 1;
-          points[i].bordersId = [borders[i].id, borders[prev].id];
-          points[i].pBId = [...points[i].bordersId, point.id];
-          points[i].cInPx = point.c.map((pc) => pc * pxPerMm);
-          borders[i].pointsInPx = borders[i].points.map((pc) => pc * pxPerMm);
-          if (borders[i].radius) borders[i].radiusInPx = borders[i].radius * pxPerMm;
-          if (['inset', 'bulge'].includes(point.subType)) {
-            const index = part.insetsBulges.findIndex((ib) => ib.id === point.insetBulgeId);
-            part.insetsBulges[index].points.push(...point.c);
-            part.insetsBulges[index].pointsInPx.push(...points[i].cInPx);
-          }
-          ['radiusTag', 'edgeTag', 'sizeTag'].forEach((tag) => {
-            if (!(tag in borders[i])) borders[i][tag] = {};
-          });
-          if (!('angleTag' in point)) points[i].angleTag = {};
-        });
-        return part;
-      });
-    },
     canvasSizeInPx(state, getters, rootState) {
       const { canvasHeightInMm, canvasWidthInMm, pxPerMm } = rootState;
       const size = { width: 0, height: 0 };
@@ -47,35 +20,11 @@ export default {
       }
       return size;
     },
-    boundingBoxes(state, getters) {
-      return getters.parts.map((part) => {
-        const xs = part.points.map((p) => p.cInPx[0]);
-        const ys = part.points.map((p) => p.cInPx[1]);
-        const bb = {
-          id: part.id,
-          absolute: {
-            x1: Math.min(...xs),
-            x2: Math.max(...xs),
-            y1: Math.min(...ys),
-            y2: Math.max(...ys),
-          },
-        };
-        bb.relative = {
-          x1: bb.absolute.x1 + part.position.x,
-          x2: bb.absolute.x2 + part.position.x,
-          y1: bb.absolute.y1 + part.position.y,
-          y2: bb.absolute.y2 + part.position.y,
-        };
-        bb.width = Math.abs(bb.absolute.x2 - bb.absolute.x1);
-        bb.height = Math.abs(bb.absolute.y2 - bb.absolute.y1);
-        return bb;
-      });
-    },
     selectedEl(state, getters, rootState) {
       const id = rootState.selectedElId;
       if (!id) return {};
       let selectedEl = {};
-      getters.parts.some((part, i) => {
+      state.partsInit.some((part, i) => {
         if (part.id === id) {
           selectedEl = { i, el: part };
           return true;
@@ -213,6 +162,7 @@ export default {
     },
     deletePart(state, partIndex) {
       state.partsInit.splice(partIndex, 1);
+      state.boundingBoxes.splice(partIndex, 1);
     },
     addTextBlock(state, payload) {
       const { i, ...params } = payload;
@@ -243,6 +193,9 @@ export default {
       } else {
         Vue.set(state.partsInit[i].texts[payload.j], 'x', payload.text);
       }
+    },
+    setBoundingBox(state, { i, bb }) {
+      Vue.set(state.boundingBoxes, i, bb);
     },
   },
   actions: {

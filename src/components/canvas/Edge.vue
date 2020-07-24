@@ -112,13 +112,12 @@ export default {
     contextMenuAction(data) {
       if (data.partIndex !== this.partIndex) return;
       if (data.borderIndex !== this.border.config.allBordersIndex) return;
-      if (['addEdge', 'hideEdge'].includes(data.action)) {
+      if (data.action === 'hideEdge') {
         const payload = {
           i: data.partIndex,
           j: data.borderIndex,
-          isShown: data.action === 'addEdge',
+          isShown: false,
         };
-        if (data.action === 'addEdge') payload.id = this.getId();
         this.$store.commit('setEdgeTagParams', payload);
         this.$store.commit('addLog');
       }
@@ -179,8 +178,8 @@ export default {
           correctAngle,
         });
       } else if (type === 'line') {
-        const x2 = pos.x + this.partPosition.x;
-        const y2 = pos.y + this.partPosition.y;
+        const x2 = pos.x - this.partPosition.x;
+        const y2 = pos.y - this.partPosition.y;
         const pts = this.border.border.pointsInPx;
         const vec1 = new Victor(pts[2] - pts[0], pts[3] - pts[1]);
         const vec2 = new Victor(x2 - pts[0], y2 - pts[1]);

@@ -12,7 +12,8 @@
       @mouseover="$store.commit('setCurrentEl', partShapeConfig.id)"
       @mouseleave="$store.commit('setCurrentEl', null)"
       @click="$store.commit('setSelectedElId', part.id)"
-      @contextmenu="setContextMenuEvent" />
+      @contextmenu="setContextMenuEvent"
+      ref="shape" />
       <insets-bulges
         :part="part"
         :partIndex="partIndex"
@@ -20,7 +21,8 @@
       <borders
         :part="part"
         :partIndex="partIndex"
-        :curves="curves" />
+        :curves="curves"
+        :shape="$refs.shape" />
       <points :points="part.points" :partIndex="partIndex" :part="part" />
     </v-group>
   </div>
@@ -33,7 +35,7 @@ import InsetsBulges from './InsetsBulges.vue';
 import fills from '../../modules/fills';
 
 export default {
-  props: ['partIndex', 'part'],
+  props: ['partIndex', 'partInit'],
   data() {
     return {
     };
@@ -46,8 +48,38 @@ export default {
   computed: {
     selectedElId() { return this.$store.state.selectedElId; },
     currentElId() { return this.$store.state.currentElId; },
+    pxPerMm() { return this.$store.state.pxPerMm; },
+    part() {
+      const part = this.clone(this.partInit);
+      // console.log(part.id);
+      const { points, borders } = part;
+      const { pxPerMm } = this;
+      points.forEach((point, i) => {
+        const next = i < points.length - 1 ? i + 1 : 0;
+        borders[i].points = [...point.c, ...points[next].c];
+        borders[i].pointsId = [point.id, points[next].id];
+        borders[i].pointsIndexes = [i, next];
+        const prev = i ? i - 1 : points.length - 1;
+        points[i].bordersId = [borders[i].id, borders[prev].id];
+        points[i].pBId = [...points[i].bordersId, point.id];
+        points[i].cInPx = point.c.map((pc) => pc * pxPerMm);
+        borders[i].pointsInPx = borders[i].points.map((pc) => pc * pxPerMm);
+        if (borders[i].radius) borders[i].radiusInPx = borders[i].radius * pxPerMm;
+        if (['inset', 'bulge'].includes(point.subType)) {
+          const index = part.insetsBulges.findIndex((ib) => ib.id === point.insetBulgeId);
+          part.insetsBulges[index].points.push(...point.c);
+          part.insetsBulges[index].pointsInPx.push(...points[i].cInPx);
+        }
+        ['radiusTag', 'edgeTag', 'sizeTag'].forEach((tag) => {
+          if (!(tag in borders[i])) borders[i][tag] = {};
+        });
+        if (!('angleTag' in point)) points[i].angleTag = {};
+      });
+      return part;
+    },
     curves() {
       const curves = {};
+      // console.log(this.part.id);
       this.part.borders.forEach((border) => {
         if (border.type !== 'curveBorder') return;
         const radius = border.radiusInPx;
@@ -107,11 +139,32 @@ export default {
         },
       };
     },
-    otherPartsBB() {
-      return this.$store.getters.boundingBoxes.filter((bb) => bb.id !== this.part.id);
-    },
     myBB() {
-      return this.$store.getters.boundingBoxes[this.partIndex];
+      const { part } = this;
+      const xs = part.points.map((p) => p.cInPx[0]);
+      const ys = part.points.map((p) => p.cInPx[1]);
+      const bb = {
+        id: part.id,
+        absolute: {
+          x1: Math.min(...xs),
+          x2: Math.max(...xs),
+          y1: Math.min(...ys),
+          y2: Math.max(...ys),
+        },
+      };
+      bb.relative = {
+        x1: bb.absolute.x1 + part.position.x,
+        x2: bb.absolute.x2 + part.position.x,
+        y1: bb.absolute.y1 + part.position.y,
+        y2: bb.absolute.y2 + part.position.y,
+      };
+      bb.width = Math.abs(bb.absolute.x2 - bb.absolute.x1);
+      bb.height = Math.abs(bb.absolute.y2 - bb.absolute.y1);
+      return bb;
+    },
+    otherPartsBB() {
+      return this.$store.state.parts.boundingBoxes
+        .filter((b) => b.id !== this.part.id);
     },
     groupConfig() {
       const bb = this.otherPartsBB;
@@ -175,6 +228,12 @@ export default {
           this.$store.commit('addLog');
         }, 0);
       }
+    },
+    myBB: {
+      handler(bb) {
+        this.$store.commit('setBoundingBox', { i: this.partIndex, bb });
+      },
+      immediate: true,
     },
   },
   methods: {

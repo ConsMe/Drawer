@@ -29,7 +29,14 @@ export default {
       }
       return coords;
     },
-    parts() { return this.$store.getters.parts; },
+    part() {
+      if (!('partIndex' in this.contextMenuEvent)) return null;
+      return this.$store.state.parts.partsInit[this.contextMenuEvent.partIndex];
+    },
+    border() {
+      if (!this.part || !('borderIndex' in this.contextMenuEvent)) return null;
+      return this.part.borders[this.contextMenuEvent.borderIndex];
+    },
     items() {
       if (!this.contextMenuEvent) return [];
       const items = [];
@@ -50,51 +57,51 @@ export default {
               {
                 name: 'Вставить точку',
                 action: 'addPoint',
-                borderIndex: this.contextMenuEvent.borderIndex,
+                borderIndex,
               },
               {
                 name: 'Сделать выпуклой',
                 isInside: false,
                 action: 'makeBorderCurve',
-                borderIndex: this.contextMenuEvent.borderIndex,
+                borderIndex,
               },
               {
                 name: 'Сделать вогнутой',
                 isInside: true,
                 action: 'makeBorderCurve',
-                borderIndex: this.contextMenuEvent.borderIndex,
+                borderIndex,
               },
               {
                 name: 'Сделать вырез',
                 isInside: true,
                 action: 'makeBulgeInset',
-                borderIndex: this.contextMenuEvent.borderIndex,
+                borderIndex,
               },
               {
                 name: 'Сделать выступ',
                 isInside: false,
                 action: 'makeBulgeInset',
-                borderIndex: this.contextMenuEvent.borderIndex,
+                borderIndex,
               },
             ]);
           }
           items.push({
             name: 'Добавить/убрать бортик',
             action: 'toggleSkirting',
-            borderIndex: this.contextMenuEvent.borderIndex,
+            borderIndex,
           });
           if (!attrs.sizeTag.isShown && attrs.isHoverable) {
             items.push({
               name: 'Показать размер',
               action: 'showSizeArrow',
-              borderIndex: this.contextMenuEvent.borderIndex,
+              borderIndex,
             });
           }
-          if (!this.parts[partIndex].borders[borderIndex].edgeTag.isShown) {
+          if (this.border && (!this.border.edgeTag || !this.border.edgeTag.isShown)) {
             items.push({
               name: 'Добавить кромку',
               action: 'addEdge',
-              borderIndex: this.contextMenuEvent.borderIndex,
+              borderIndex,
             });
           }
           return items;
@@ -103,12 +110,12 @@ export default {
             {
               name: 'Сделать прямой',
               action: 'makeBorderLine',
-              borderIndex: this.contextMenuEvent.borderIndex,
+              borderIndex,
             },
             {
               name: 'Добавить/убрать бортик',
               action: 'toggleSkirting',
-              borderIndex: this.contextMenuEvent.borderIndex,
+              borderIndex,
             },
           );
           if (attrs.isInside) {
@@ -117,7 +124,7 @@ export default {
                 name: 'Сделать выпуклой',
                 isInside: false,
                 action: 'makeBorderCurve',
-                borderIndex: this.contextMenuEvent.borderIndex,
+                borderIndex,
               },
             );
           } else {
@@ -126,7 +133,7 @@ export default {
                 name: 'Сделать вогнутой',
                 isInside: true,
                 action: 'makeBorderCurve',
-                borderIndex: this.contextMenuEvent.borderIndex,
+                borderIndex,
               },
             );
           }
@@ -134,23 +141,22 @@ export default {
             items.push({
               name: 'Показать радиус',
               action: 'showRadius',
-              borderIndex: this.contextMenuEvent.borderIndex,
+              borderIndex,
             });
           }
-          if (!this.parts[partIndex].borders[borderIndex].edgeTag.isShown) {
+          if (this.border && this.border.edgeTag && !this.border.edgeTag.isShown) {
             items.push({
               name: 'Добавить кромку',
               action: 'addEdge',
-              borderIndex: this.contextMenuEvent.borderIndex,
+              borderIndex,
             });
           }
           return items;
         case 'point': {
-          const part = this.parts[partIndex];
           const j2 = this.contextMenuEvent.pointIndex;
-          const j1 = j2 > 0 ? j2 - 1 : part.points.length - 1;
-          const border1 = part.borders[j1];
-          const border2 = part.borders[j2];
+          const j1 = j2 > 0 ? j2 - 1 : this.part.points.length - 1;
+          const border1 = this.part.borders[j1];
+          const border2 = this.part.borders[j2];
           if (border1.type === 'lineBorder' && border2.type === 'lineBorder') {
             if (!attrs.isInsetBulge) {
               items.push(...[
@@ -196,8 +202,8 @@ export default {
           return [
             {
               name: 'Скрыть',
-              action: 'hide',
-              borderIndex: this.contextMenuEvent.borderIndex,
+              action: 'hideSizeArrow',
+              borderIndex,
             },
           ];
         case 'radius':
@@ -205,7 +211,7 @@ export default {
             {
               name: 'Скрыть',
               action: 'hide',
-              borderIndex: this.contextMenuEvent.borderIndex,
+              borderIndex,
             },
           ];
         case 'angleTag':
@@ -221,7 +227,7 @@ export default {
             {
               name: 'Скрыть',
               action: 'hideEdge',
-              borderIndex: this.contextMenuEvent.borderIndex,
+              borderIndex,
             },
           ];
         case 'totalText':

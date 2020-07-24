@@ -1,71 +1,38 @@
 <template>
   <div>
-    <v-line
-      v-for="b in lineBorders"
-      :key="b.border.id"
-      :config="{
-        ...b.config,
-        stroke: [currentElId, selectedElId].includes(b.border.id) || selectedElId === part.id
-          ? selectedColor : 'black',
-      }"
-      :ref="`border${b.border.id}`"
-      @contextmenu="setContextMenuEvent($event, b.config.allBordersIndex)"
-      @mouseover="$store.commit('setCurrentEl', b.border.id)"
-      @mouseleave="$store.commit('setCurrentEl', null)"
-      @click="b.config.isClickable ? $store.commit('setSelectedElId', b.border.id) : ''" />
-    <v-arc
-      v-for="b in curveBorders"
-      :key="b.border.id"
-      :config="{
-        ...b.config,
-        stroke: [currentElId, selectedElId].includes(b.border.id) || selectedElId === part.id
-          ? selectedColor : 'black',
-      }"
-      :ref="`border${b.border.id}`"
-      @contextmenu="setContextMenuEvent($event, b.config.allBordersIndex)"
-      @mouseover="$store.commit('setCurrentEl', b.border.id)"
-      @mouseleave="$store.commit('setCurrentEl', null)"
-      @click="$store.commit('setSelectedElId', b.border.id)" />
-    <size-arrow-tag
-      v-for="b in lineBorders"
-      :key="`a${b.border.id}`"
-      :border="b"
+    <line-border
+      v-for="border in borders.lineBorder"
+      :key="border.id"
+      :border="border"
+      :part="part"
+      :partIndex="partIndex" />
+    <curve-border
+      v-for="border in borders.curveBorder"
+      :key="border.id"
+      :border="border"
+      :part="part"
       :partIndex="partIndex"
-      :part="part" />
-    <radius-tag v-for="b in curveBorders"
-      :key="`c${b.border.id}`"
-      :border="b"
-      :partIndex="partIndex"
-      :part="part" />
-    <edges
-      v-for="(b) in [...lineBorders, ...curveBorders]"
-      :key="`e${b.border.id}`"
-      :border="b"
-      :partIndex="partIndex"
-      :part="part" />
+      :curves="curves" />
   </div>
 </template>
 
 <script>
-// import $ from 'jquery';
 import Victor from 'victor';
 import getId from '../../mixins/getId';
-import SizeArrowTag from './SizeArrowTag.vue';
-import RadiusTag from './RadiusTag.vue';
-import Edges from './Edges.vue';
+import LineBorder from './LineBorder.vue';
+import CurveBorder from './CurveBorder.vue';
 
 export default {
   mixins: [getId],
-  props: ['part', 'partIndex', 'curves'],
-  components: { SizeArrowTag, RadiusTag, Edges },
-  data() {
-    return {
-    };
+  props: ['part', 'partIndex', 'curves', 'shape'],
+  components: {
+    LineBorder, CurveBorder,
   },
   computed: {
     selectedElId() { return this.$store.state.selectedElId; },
     currentElId() { return this.$store.state.currentElId; },
     pxPerMm() { return this.$store.state.pxPerMm; },
+    partPosition() { return this.part.position; },
     borders() {
       const borders = {};
       this.part.borders.forEach((border, i) => {
@@ -73,59 +40,6 @@ export default {
         borders[border.type].push({ ...border, allBordersIndex: i });
       });
       return borders;
-    },
-    lineBorders() {
-      if (!this.borders.lineBorder) return [];
-      return this.borders.lineBorder.map((border) => {
-        const prev = border.allBordersIndex ? this.part.borders[border.allBordersIndex - 1]
-          : this.part.borders[this.part.borders.length - 1];
-        const next = border.allBordersIndex < this.part.borders.length - 1
-          ? this.part.borders[border.allBordersIndex + 1] : this.part.borders[0];
-        const { type, id, points } = border;
-        const config = {
-          type,
-          id,
-          points: points.map((p) => p * this.pxPerMm),
-          strokeWidth: border.skirting ? 4 : 1,
-          lineCap: prev.skirting && next.skirting ? 'square' : 'butt',
-          hitStrokeWidth: 5,
-          allBordersIndex: border.allBordersIndex,
-          isClickable: !['inset', 'bulge'].includes(border.subType),
-          // isHoverable: !['inset', 'bulge'].includes(border.subType) || !border.sizeTag.isShown,
-          sizeTag: border.sizeTag,
-        };
-        return { config, border };
-      });
-    },
-    curveBorders() {
-      if (!this.borders.curveBorder) return [];
-      return this.borders.curveBorder.map((border) => {
-        const prev = border.allBordersIndex ? this.part.borders[border.allBordersIndex - 1]
-          : this.part.borders[this.part.borders.length - 1];
-        const next = border.allBordersIndex < this.part.borders.length - 1
-          ? this.part.borders[border.allBordersIndex + 1] : this.part.borders[0];
-        const { type, id, points } = border;
-        const c = { ...this.curves[border.id] };
-        const config = {
-          type,
-          id,
-          points: points.map((p) => p * this.pxPerMm),
-          isInside: border.isInside,
-          strokeWidth: border.skirting ? 4 : 1,
-          lineJoin: prev.skirting && next.skirting ? 'round' : 'miter',
-          hitStrokeWidth: 5,
-          allBordersIndex: border.allBordersIndex,
-          innerRadius: c.R,
-          outerRadius: c.R,
-          x: c.c1.x,
-          y: c.c1.y,
-          angle: c.ang2 * (180 / Math.PI) - c.ang1 * (180 / Math.PI),
-          rotation: c.ang1 * (180 / Math.PI),
-          clockwise: c.isInside,
-          radiusTag: border.radiusTag,
-        };
-        return { config, border };
-      });
     },
     contextMenuAction() { return this.$store.state.contextMenuAction; },
     refreshSelectedElTrigger() { return this.$store.state.parts.refreshSelectedElTrigger; },
@@ -143,6 +57,22 @@ export default {
         this.makeBulgeInset(data);
       } else if (data.action === 'toggleSkirting') {
         this.$store.commit('toggleSkirting', { i: data.partIndex, j: data.borderIndex });
+        this.$store.commit('addLog');
+      } else if (data.action === 'showSizeArrow') {
+        this.$store.commit('setSizeTagParams', {
+          i: data.partIndex,
+          j: data.borderIndex,
+          isShown: true,
+        });
+        this.$store.commit('addLog');
+      } else if (data.action === 'addEdge') {
+        const payload = {
+          i: data.partIndex,
+          j: data.borderIndex,
+          isShown: true,
+          id: this.getId(),
+        };
+        this.$store.commit('setEdgeTagParams', payload);
         this.$store.commit('addLog');
       }
     },
@@ -208,6 +138,17 @@ export default {
       this.$store.commit('addInsetBulge', { ...insetBulge, type: subType, depth });
       this.$store.commit('setSelectedElId', insetBulgeId);
       this.$store.commit('addLog');
+    },
+    checkOtherLinesLength(p1, p2) {
+      const stage = this.shape.getNode().getStage();
+      const inter1 = stage.getIntersection({ x: p1.x * this.pxPerMm, y: p1.y * this.pxPerMm });
+      const inter2 = stage.getIntersection({ x: p2.x * this.pxPerMm, y: p2.y * this.pxPerMm });
+      console.log(inter1, inter2);
+      // if (!inter1 || inter1.attrs.id !== this.part.id) return false;
+      // if (!inter2 || inter2.attrs.id !== this.part.id) return false;
+      // if (!inter1 || inter1.attrs.type !== 'part') return false;
+      // if (!inter2 || inter2.attrs.type !== 'part') return false;
+      return true;
     },
   },
 };
