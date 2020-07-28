@@ -2,6 +2,18 @@
   <div>
     <form @submit.prevent="setParams">
       <div class="form-group row no-gutters">
+        <label class="col-auto col-form-label text-left">Отступ от прямой</label>
+        <div class="col-auto px-1">
+          <input type="text" class="form-control" v-model="marginInMm" @input="calcRadius">
+        </div>
+        <span class="col-auto d-flex align-items-center">мм</span>
+        <div class="w-100"></div>
+        <small
+          class="form-text text-muted col-auto text-left">
+          {{ `Максимальный отступ ${maxMargin} мм` }}
+        </small>
+      </div>
+      <div class="form-group row no-gutters">
         <label class="col-auto col-form-label text-left">Радиус</label>
         <div class="col-auto px-1">
           <input type="text" class="form-control" v-model="radiusInMm">
@@ -52,6 +64,7 @@ export default {
       radiusInMm: 0,
       choosedPoint: null,
       lengthInMm: 0,
+      marginInMm: 0,
     };
   },
   computed: {
@@ -78,22 +91,38 @@ export default {
       return Math.round(length);
     },
     minRadius() {
-      return Math.round(this.lengthInMm / 2) + 2;
+      return Math.floor(this.lengthInMm / 2);
     },
     maxLength() {
-      return this.radiusInMm * 2 - 2;
+      return Math.ceil(this.radiusInMm * 2);
+    },
+    maxMargin() {
+      return Math.ceil(this.lengthInMm / 2);
+    },
+    currentMarginInMm() {
+      const r = this.radiusInMm;
+      const margin = r - Math.sqrt(((r ** 2) - ((this.currentLengthInMm ** 2) / 4)));
+      return Math.round(margin * 1000) / 1000;
     },
   },
   watch: {
     points: {
       handler() {
-        this.radiusInMm = Math.round(this.element.radius);
+        this.radiusInMm = this.element.radius;
         this.lengthInMm = this.currentLengthInMm;
+        this.marginInMm = this.currentMarginInMm;
       },
       immediate: true,
     },
   },
   methods: {
+    calcRadius() {
+      const l = this.currentLengthInMm;
+      const h = this.marginInMm;
+      let radius = ((h ** 2) + ((l ** 2) / 4)) / (2 * h);
+      if (h > this.maxMargin) radius = 0;
+      this.radiusInMm = Math.round(radius * 1000) / 1000;
+    },
     setParams() {
       if (this.lengthInMm > this.maxLength) {
         toastr.warning(`При таком радиусе длина не может быть больше ${this.maxLength} мм`);
@@ -179,7 +208,7 @@ export default {
         const p1 = { x: points[prevIndex].c[0], y: points[prevIndex].c[1] };
         const p2 = pts.find((p) => p.id === points[curIndex].id);
         if (p2) {
-          const minRadius = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2) / 2 + 2;
+          const minRadius = Math.floor(Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2) / 2);
           if (prevBorder.radius < minRadius) radiuses.push({ j: prevIndex, radius: minRadius });
         }
       }
@@ -190,7 +219,7 @@ export default {
         const p1 = { x: points[nextIndex].c[0], y: points[nextIndex].c[1] };
         const p2 = pts.find((p) => p.id === points[curIndex].id);
         if (p2) {
-          const minRadius = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2) / 2 + 2;
+          const minRadius = Math.floor(Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2) / 2);
           if (nextBorder.radius < minRadius) radiuses.push({ j: curIndex, radius: minRadius });
         }
       }

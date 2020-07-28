@@ -14,12 +14,15 @@ import getId from '../../../mixins/getId';
 
 export default {
   mixins: [getId],
+  computed: {
+    canvasHeightInMm() { return this.$store.state.canvasHeightInMm; },
+  },
   methods: {
     addText() {
       this.$store.dispatch('addTextBlock', {
         id: this.getId(),
-        x: 10,
-        y: 100,
+        x: 100,
+        y: this.canvasHeightInMm / 2,
         type: 'totalText',
         fontSizeK: 1,
         text: '',

@@ -21,6 +21,7 @@ import $ from 'jquery';
 export default {
   computed: {
     contextMenuEvent() { return this.$store.state.contextMenuEvent; },
+    pxPerMm() { return this.$store.state.pxPerMm; },
     coords() {
       const coords = { top: 0, left: 0 };
       if (this.contextMenuEvent) {
@@ -37,6 +38,10 @@ export default {
       if (!this.part || !('borderIndex' in this.contextMenuEvent)) return null;
       return this.part.borders[this.contextMenuEvent.borderIndex];
     },
+    point() {
+      if (!this.part || !('pointIndex' in this.contextMenuEvent)) return null;
+      return this.part.points[this.contextMenuEvent.pointIndex];
+    },
     items() {
       if (!this.contextMenuEvent) return [];
       const items = [];
@@ -49,6 +54,18 @@ export default {
               name: 'Удалить элемент',
               action: 'deletePart',
               partIndex,
+            },
+            {
+              name: 'Добавить размер',
+              action: 'addSingleSizeTag',
+              partIndex,
+            },
+            {
+              name: 'Добавить мойку',
+              action: 'addWashing',
+              partIndex,
+              left: this.contextMenuEvent.e.evt.layerX / this.pxPerMm,
+              top: this.contextMenuEvent.e.evt.layerY / this.pxPerMm,
             },
           ];
         case 'lineBorder':
@@ -90,7 +107,7 @@ export default {
             action: 'toggleSkirting',
             borderIndex,
           });
-          if (!attrs.sizeTag.isShown && attrs.isHoverable) {
+          if (!this.border.sizeTag.isShown && attrs.isHoverable) {
             items.push({
               name: 'Показать размер',
               action: 'showSizeArrow',
@@ -137,7 +154,7 @@ export default {
               },
             );
           }
-          if (!attrs.radiusTag.isShown) {
+          if (!this.border.radiusTag.isShown) {
             items.push({
               name: 'Показать радиус',
               action: 'showRadius',
@@ -158,7 +175,7 @@ export default {
           const border1 = this.part.borders[j1];
           const border2 = this.part.borders[j2];
           if (border1.type === 'lineBorder' && border2.type === 'lineBorder') {
-            if (!attrs.isInsetBulge) {
+            if (!('insetBulgeId' in this.point)) {
               items.push(...[
                 {
                   name: 'Удалить точку',
@@ -179,7 +196,7 @@ export default {
                 pointIndex: this.contextMenuEvent.pointIndex,
               },
             );
-            if (!attrs.angleTag.isShown) {
+            if (!this.point.angleTag.isShown) {
               items.push({
                 name: 'Показать угол',
                 action: 'showAngle',
@@ -218,7 +235,7 @@ export default {
           return [
             {
               name: 'Скрыть',
-              action: 'hide',
+              action: 'hideAngle',
               pointIndex: this.contextMenuEvent.pointIndex,
             },
           ];
@@ -238,6 +255,22 @@ export default {
               textIndex: this.contextMenuEvent.textIndex,
             },
           ];
+        case 'singleSizeTag':
+          return [
+            {
+              name: 'Удалить размер',
+              action: 'deleteSingleSizeTag',
+              sizeTagIndex: this.contextMenuEvent.sizeTagIndex,
+            },
+          ];
+        case 'legend':
+          return [
+            {
+              name: 'Удалить элемент легенды',
+              action: 'deleteLegend',
+              legendIndex: this.contextMenuEvent.legendIndex,
+            },
+          ];
         default:
           return [];
       }
@@ -245,6 +278,7 @@ export default {
   },
   watch: {
     contextMenuEvent() {
+      this.console.log('ctxtmenu');
       $(this.$refs.menu).dropdown('show');
     },
   },
@@ -260,6 +294,7 @@ export default {
         ...item,
         partIndex: this.contextMenuEvent.partIndex,
       };
+      this.$store.commit('setContextMenuEvent', null);
       this.$store.commit('setContextMenuAction', payload);
       setTimeout(() => {
         $(this.$refs.menu).dropdown('hide');

@@ -27,9 +27,9 @@ export default {
   data() {
     return {
       types: [
-        { name: 'Empty', type: 'empty' },
-        { name: 'Half', type: 'half' },
-        { name: 'Full', type: 'full' },
+        { name: 'Кромка 1', type: 'empty' },
+        { name: 'Кромка 2', type: 'half' },
+        { name: 'Кромка 3', type: 'full' },
       ],
       selectedType: this.initType,
     };

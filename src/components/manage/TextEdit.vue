@@ -29,12 +29,17 @@ export default {
     style() {
       const { el } = this.selectedEl;
       if (!el || !this.isTextEditMode) return null;
-      if (!['text', 'totalText'].includes(el.type)) return null;
-      const fontSize = this.$store.state.fontSizeInmM.text
-        * this.pxPerMm * this.selectedEl.el.fontSizeK;
+      if (!['text', 'totalText', 'legend'].includes(el.type)) return null;
+      const sizeK = el.type === 'totalText'
+        ? this.selectedEl.el.fontSizeK : this.selectedEl.el.sizeK;
+      const fontSize = this.$store.state.fontSizeInmM.text * this.pxPerMm * sizeK;
       let style;
-      if (el.type === 'totalText') {
-        style = { top: `${el.y}px`, left: `${el.x}px`, fontSize: `${Math.round(fontSize)}px` };
+      if (el.type === 'totalText' || el.type === 'legend') {
+        style = {
+          top: `${el.y * this.pxPerMm}px`,
+          left: `${el.x * this.pxPerMm}px`,
+          fontSize: `${Math.round(fontSize)}px`,
+        };
         const textNodes = this.$store.state.stage.find('Text');
         const textNode = textNodes.toArray().find((t) => t.id() === el.id);
         const width = textNode.width();
@@ -63,12 +68,15 @@ export default {
       const { type } = el;
       const payload = { i, j, type };
       if (!text.length) {
-        this.$store.commit('deleteTextBlock', payload);
+        const delCommit = el.type === 'totalText' ? 'deleteTextBlock' : 'deleteLegend';
+        this.$store.commit(delCommit, payload);
         if (el.text.length) {
           this.$store.commit('addLog');
         }
       } else {
-        this.$store.commit('setTextBlock', { ...payload, text });
+        const setCommit = el.type === 'totalText' ? 'setTextBlock' : 'setLegendParams';
+        const setPayload = el.type === 'totalText' ? { ...payload, text } : { i, text };
+        this.$store.commit(setCommit, setPayload);
         this.$store.commit('addLog');
       }
       this.$store.commit('setTextEditMode', false);

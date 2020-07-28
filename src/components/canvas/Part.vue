@@ -9,83 +9,86 @@
         fillPatternImage: fill.image,
         fillPriority: 'pattern',
       }"
-      @mouseover="$store.commit('setCurrentEl', partShapeConfig.id)"
+      ref="shape"
+      @mouseover="$store.commit('setCurrentEl', part.id)"
       @mouseleave="$store.commit('setCurrentEl', null)"
       @click="$store.commit('setSelectedElId', part.id)"
-      @contextmenu="setContextMenuEvent"
-      ref="shape" />
-      <insets-bulges
-        :part="part"
+      @contextmenu="setContextMenuEvent" />
+      <inset-bulge
+        v-for="(ib, index) in part.insetsBulges"
+        :key="ib.id"
         :partIndex="partIndex"
-        v-if="part.insetsBulges && part.insetsBulges.length" />
+        :iBIndex="index" />
       <borders
         :part="part"
         :partIndex="partIndex"
-        :curves="curves"
-        :shape="$refs.shape" />
-      <points :points="part.points" :partIndex="partIndex" :part="part" />
+        :curves="curves" />
+      <p-point
+        v-for="(point, index) in points"
+        :key="point.id"
+        :pointIndex="index"
+        :partIndex="partIndex" />
+      <single-size-tag
+        v-for="(sizeTag, index) in part.singleSizeTags"
+        :key="sizeTag.id"
+        :partIndex="partIndex"
+        :sizeTagIndex="index"  />
+      <washing
+        v-for="(washing, index) in part.washings"
+        :key="washing.id"
+        :partIndex="partIndex"
+        :washingIndex="index"  />
     </v-group>
   </div>
 </template>
 
 <script>
 import Borders from './Borders.vue';
-import Points from './Points.vue';
-import InsetsBulges from './InsetsBulges.vue';
+import PPoint from './Point.vue';
+import InsetBulge from './InsetBulge.vue';
 import fills from '../../modules/fills';
+import SingleSizeTag from './SingleSizeTag.vue';
+import Washing from './Washing.vue';
+import getId from '../../mixins/getId';
 
 export default {
-  props: ['partIndex', 'partInit'],
+  mixins: [getId],
+  props: ['partIndex', 'part'],
   data() {
     return {
     };
   },
   components: {
     Borders,
-    Points,
-    InsetsBulges,
+    PPoint,
+    InsetBulge,
+    SingleSizeTag,
+    Washing,
   },
   computed: {
     selectedElId() { return this.$store.state.selectedElId; },
     currentElId() { return this.$store.state.currentElId; },
     pxPerMm() { return this.$store.state.pxPerMm; },
-    part() {
-      const part = this.clone(this.partInit);
-      // console.log(part.id);
-      const { points, borders } = part;
-      const { pxPerMm } = this;
-      points.forEach((point, i) => {
-        const next = i < points.length - 1 ? i + 1 : 0;
-        borders[i].points = [...point.c, ...points[next].c];
-        borders[i].pointsId = [point.id, points[next].id];
-        borders[i].pointsIndexes = [i, next];
-        const prev = i ? i - 1 : points.length - 1;
-        points[i].bordersId = [borders[i].id, borders[prev].id];
-        points[i].pBId = [...points[i].bordersId, point.id];
-        points[i].cInPx = point.c.map((pc) => pc * pxPerMm);
-        borders[i].pointsInPx = borders[i].points.map((pc) => pc * pxPerMm);
-        if (borders[i].radius) borders[i].radiusInPx = borders[i].radius * pxPerMm;
-        if (['inset', 'bulge'].includes(point.subType)) {
-          const index = part.insetsBulges.findIndex((ib) => ib.id === point.insetBulgeId);
-          part.insetsBulges[index].points.push(...point.c);
-          part.insetsBulges[index].pointsInPx.push(...points[i].cInPx);
-        }
-        ['radiusTag', 'edgeTag', 'sizeTag'].forEach((tag) => {
-          if (!(tag in borders[i])) borders[i][tag] = {};
-        });
-        if (!('angleTag' in point)) points[i].angleTag = {};
-      });
-      return part;
+    curveBorders() {
+      return this.part.borders.filter((b) => b.type === 'curveBorder')
+        .map((b) => (
+          {
+            pointsIndexes: b.pointsIndexes,
+            isInside: b.isInside,
+            id: b.id,
+            radius: b.radius,
+          }));
     },
     curves() {
       const curves = {};
-      // console.log(this.part.id);
-      this.part.borders.forEach((border) => {
-        if (border.type !== 'curveBorder') return;
-        const radius = border.radiusInPx;
-        const points = border.pointsInPx;
-        const p1 = { x: points[0], y: points[1] };
-        const p2 = { x: points[2], y: points[3] };
+      // console.log('curves', this.part.id);
+      const { points } = this.part;
+      this.curveBorders.forEach((border) => {
+        const radius = border.radius * this.pxPerMm;
+        const coords1 = points[border.pointsIndexes[0]].c.map((a) => a * this.pxPerMm);
+        const coords2 = points[border.pointsIndexes[1]].c.map((a) => a * this.pxPerMm);
+        const p1 = { x: coords1[0], y: coords1[1] };
+        const p2 = { x: coords2[0], y: coords2[1] };
         const pm = { x: 0.5 * (p1.x + p2.x), y: 0.5 * (p1.y + p2.y) };
         let perpABdx = -(p2.y - p1.y);
         let perpABdy = p2.x - p1.x;
@@ -118,18 +121,30 @@ export default {
       });
       return curves;
     },
+    points() {
+      return this.part.points.map((p) => p.c.map((c) => c * this.pxPerMm));
+    },
+    borders() {
+      return this.part.borders.map((border) => (
+        {
+          type: border.type,
+          id: border.id,
+        }
+      ));
+    },
     partShapeConfig() {
-      const { points, borders, type } = this.part;
-      const { curves } = this;
+      this.console.log('partShape', this.part.id);
+      const { type, id } = this.part;
+      const { points, curves, borders } = this;
       return {
         type,
-        id: this.part.id,
+        id,
         sceneFunc(ctx, shape) {
           ctx.beginPath();
-          ctx.moveTo(...points[0].cInPx);
+          ctx.moveTo(...points[0]);
           points.forEach((point, i) => {
             if (borders[i].type === 'lineBorder') {
-              ctx.lineTo(...point.cInPx);
+              ctx.lineTo(...point);
             } else if (borders[i].type === 'curveBorder') {
               const c = curves[borders[i].id];
               ctx.arc(c.c1.x, c.c1.y, c.R, c.ang1, c.ang2, c.isInside);
@@ -141,8 +156,8 @@ export default {
     },
     myBB() {
       const { part } = this;
-      const xs = part.points.map((p) => p.cInPx[0]);
-      const ys = part.points.map((p) => p.cInPx[1]);
+      const xs = part.points.map((p) => p.c[0] * this.pxPerMm);
+      const ys = part.points.map((p) => p.c[1] * this.pxPerMm);
       const bb = {
         id: part.id,
         absolute: {
@@ -169,11 +184,14 @@ export default {
     groupConfig() {
       const bb = this.otherPartsBB;
       const my = this.myBB.absolute;
+      const isLimitMoving = false;
       let block = null;
       const config = {
         type: 'part',
         draggable: true,
         dragBoundFunc(pos) {
+          if (!isLimitMoving) return pos;
+          // console.log(pos);
           const newPos = pos;
           if (bb.length) {
             const x1 = my.x1 + pos.x;
@@ -208,10 +226,10 @@ export default {
     },
     fill() {
       const { fill } = this.$store.state.parts.partsInit[this.partIndex];
-      const fillParams = { color: null, image: null };
+      const fillParams = { color: 'white', image: null };
       if (!fill) return fillParams;
       if (fill === 'color') {
-        fillParams.color = '#80808054';
+        fillParams.color = 'rgb(200,200,200)';
       } else {
         fillParams.image = fills({ type: fill, color: 'rgb(200,200,200)' });
       }
@@ -227,6 +245,20 @@ export default {
           this.$store.commit('deletePart', data.partIndex);
           this.$store.commit('addLog');
         }, 0);
+      } else if (data.action === 'addSingleSizeTag') {
+        const params = {
+          points: [
+            this.part.points[0].c[0],
+            this.part.points[0].c[1] - 500,
+            this.part.points[0].c[0] + 500,
+            this.part.points[0].c[1] - 500,
+          ],
+          id: this.getId(),
+          i: data.partIndex,
+          type: 'singleSizeTag',
+        };
+        this.$store.commit('addSingleSizeTag', params);
+        this.$store.commit('addLog');
       }
     },
     myBB: {
@@ -235,6 +267,15 @@ export default {
       },
       immediate: true,
     },
+    // partShapeConfig: {
+    //   handler() {
+    //     // console.log('curveBorders');
+    //     this.$refs.shape.getNode().cache();
+    //     console.log('cached');
+    //   },
+    //   // deep: true,
+    //   // immediate: true,
+    // },
   },
   methods: {
     log(e) {

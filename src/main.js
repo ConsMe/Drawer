@@ -24,6 +24,15 @@ Vue.config.productionTip = false;
 Vue.use(VueKonva);
 
 Vue.mixin({
+  data() {
+    return {
+      console: {
+        log(...payload) {
+          if (store.state.showAllConsoleLogs) console.log(...payload);
+        },
+      },
+    };
+  },
   methods: {
     clone(a) { return JSON.parse(JSON.stringify(a)); },
   },

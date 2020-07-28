@@ -3,14 +3,14 @@
     <p class="mb-0 text-left">Фон</p>
     <select class="custom-select" v-model="fill">
       <option :value="null">Без фона</option>
-      <option value="color">Цвет</option>
-      <option value="dots">Точки</option>
+      <option :value="f.type" v-for="f in fills" :key="f.type">{{ f.title }}</option>
+      <!-- <option value="dots">Точки</option>
       <option value="verticalLines">Вертикальные линии</option>
       <option value="horizontalLines">Горизонтальные линии</option>
       <option value="rightDiagonalLines">Правый штрих</option>
       <option value="leftDiagonalLines">Левый штрих</option>
       <option value="rightSmallDiagonalLines">Мелкий штрих</option>
-      <option value="rhombus">Ромб</option>
+      <option value="rhombus">Ромб</option> -->
     </select>
   </div>
 </template>
@@ -24,6 +24,7 @@ export default {
   },
   computed: {
     selectedEl() { return this.$store.getters.selectedEl; },
+    fills() { return this.$store.state.fills; },
   },
   watch: {
     fill(fill) {

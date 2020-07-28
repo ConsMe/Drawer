@@ -4,8 +4,8 @@
       :config="{
         type: text.type,
         id: text.id,
-        x: text.x,
-        y: text.y,
+        x: text.x * this.pxPerMm,
+        y: text.y * this.pxPerMm,
         text: text.text,
         fontFamily: 'Calibri',
         fontSize,
@@ -61,6 +61,8 @@ export default {
   methods: {
     dragend(e) {
       const pos = e.target.getPosition();
+      pos.x /= this.pxPerMm;
+      pos.y /= this.pxPerMm;
       this.$store.commit('setTextParams', { ...this.text, ...pos, i: this.textIndex });
       this.$store.commit('addLog');
     },

@@ -9,6 +9,7 @@ export default (params) => {
     case 'dots':
       svg = `
         <svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}'>
+          <style>svg { background-color: white; }</style>
           <circle cx="1" cy="1" r="1" fill="${color}"/>
         </svg>
       `;
@@ -16,6 +17,7 @@ export default (params) => {
     case 'verticalLines':
       svg = `
         <svg xmlns='http://www.w3.org/2000/svg' width='${size / 2}' height='${size}'>
+          <style>svg { background-color: white; }</style>
           <rect x='0' y='0' width='1' height='${size}' fill='${color}' />
         </svg>
       `;
@@ -23,6 +25,7 @@ export default (params) => {
     case 'horizontalLines':
       svg = `
         <svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size / 2}'>
+          <style>svg { background-color: white; }</style>
           <rect x='0' y='0' width='${size}' height='1' fill='${color}' />
         </svg>
       `;
@@ -30,6 +33,7 @@ export default (params) => {
     case 'rightDiagonalLines':
       svg = `
         <svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}'>
+          <style>svg { background-color: white; }</style>
           <path d='M-1,1 l2,-2 M0,10 l10,-10 M9,11 l2,-2' stroke='${color}' stroke-width='1'/>
         </svg>
       `;
@@ -37,6 +41,7 @@ export default (params) => {
     case 'leftDiagonalLines':
       svg = `
         <svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}'>
+          <style>svg { background-color: white; }</style>
           <path d='M-1,1 l2,-2 M0,10 l10,-10 M9,11 l2,-2' stroke='${color}' stroke-width='1' transform="${rotate}"/>
         </svg>
       `;
@@ -44,6 +49,7 @@ export default (params) => {
     case 'rightSmallDiagonalLines':
       svg = `
         <svg xmlns='http://www.w3.org/2000/svg' width='5' height='5'>
+          <style>svg { background-color: white; }</style>
           <path d='M0 5L5 0ZM6 4L4 6ZM-1 1L1 -1Z' stroke='${color}' stroke-width='1'/>
         </svg>
       `;
@@ -51,6 +57,7 @@ export default (params) => {
     case 'rhombus':
       svg = `
         <svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'>
+          <style>svg { background-color: white; }</style>
           <path d='M0 0L8 8ZM8 0L0 8Z' stroke-width='0.5' stroke='${color}'/>
         </svg>
       `;

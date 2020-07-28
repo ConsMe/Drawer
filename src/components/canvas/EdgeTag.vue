@@ -26,7 +26,7 @@ import getId from '../../mixins/getId';
 
 export default {
   mixins: [getId],
-  props: ['border', 'partIndex', 'part'],
+  props: ['border', 'partIndex', 'part', 'borderConfig'],
   data() {
     return {
       offsetInMm: 50,
@@ -37,7 +37,7 @@ export default {
   computed: {
     selectedElId() { return this.$store.state.selectedElId; },
     currentElId() { return this.$store.state.currentElId; },
-    edge() { return this.border.border.edgeTag; },
+    edge() { return this.border.edgeTag; },
     image() {
       const image = [this.selectedElId, this.currentElId].includes(this.edge.id)
         ? this.$store.state.files.edges[`${this.edge.edgeType}Hover`]
@@ -48,11 +48,12 @@ export default {
     sizeInPx() { return this.sizeInMm * this.pxPerMm; },
     imageOffset() { return this.sizeInPx / 2; },
     params() {
+      this.console.log('edgeTag', this.border.id);
       if (!this.edge.isShown) return {};
-      const pts = this.border.border.pointsInPx;
+      const pts = this.borderConfig.points;
       const This = this;
-      const correctDistance = this.border.border.edgeTag.correctDistance || 0;
-      if (this.border.border.type === 'lineBorder') {
+      const correctDistance = this.border.edgeTag.correctDistance || 0;
+      if (this.border.type === 'lineBorder') {
         let startVec = new Victor(pts[0], pts[1]);
         let vec = new Victor(pts[2] - pts[0], pts[3] - pts[1]);
         const originalDistance = vec.length() / 2;
@@ -75,8 +76,8 @@ export default {
           },
         };
       }
-      const { x, y } = this.border.config;
-      const correctAngle = this.border.border.edgeTag.correctAngle || 0;
+      const { x, y } = this.borderConfig;
+      const correctAngle = this.border.edgeTag.correctAngle || 0;
       let startVec = new Victor(pts[0], pts[1]);
       let vec = new Victor(pts[2] - pts[0], pts[3] - pts[1]);
       let angle = vec.angleDeg();
@@ -88,8 +89,8 @@ export default {
       startVec = new Victor(x, y);
       vec = new Victor(halfPoint.x - x, halfPoint.y - y);
       const centerAngle = vec.angleDeg();
-      const isInsideK = this.border.border.isInside ? 1 : -1;
-      const originalDistance = this.border.config.innerRadius
+      const isInsideK = this.border.isInside ? 1 : -1;
+      const originalDistance = this.borderConfig.innerRadius
         - this.offsetInMm * this.pxPerMm * isInsideK;
       const edgeDistance = originalDistance + correctDistance * this.pxPerMm;
       vec = vec.norm().rotateDeg(correctAngle).multiply(new Victor(edgeDistance, edgeDistance));
@@ -111,7 +112,7 @@ export default {
   watch: {
     contextMenuAction(data) {
       if (data.partIndex !== this.partIndex) return;
-      if (data.borderIndex !== this.border.config.allBordersIndex) return;
+      if (data.borderIndex !== this.borderConfig.allBordersIndex) return;
       if (data.action === 'hideEdge') {
         const payload = {
           i: data.partIndex,
@@ -123,13 +124,13 @@ export default {
       }
     },
     'params.originalDistance': function check(nv) {
-      const correctDistance = this.border.border.edgeTag.correctDistance || 0;
+      const correctDistance = this.border.edgeTag.correctDistance || 0;
       const middleLength = nv + correctDistance;
       const imageOffset = this.imageOffset / this.pxPerMm;
       if (middleLength < imageOffset) {
         this.$store.commit('setEdgeTagParams', {
           i: this.partIndex,
-          j: this.border.border.allBordersIndex,
+          j: this.borderConfig.allBordersIndex,
           correctDistance: imageOffset - nv,
         });
         return;
@@ -138,7 +139,7 @@ export default {
       if (middleLength > max) {
         this.$store.commit('setEdgeTagParams', {
           i: this.partIndex,
-          j: this.border.border.allBordersIndex,
+          j: this.borderConfig.allBordersIndex,
           correctDistance: max - nv,
         });
       }
@@ -159,12 +160,12 @@ export default {
       this.$store.commit('setContextMenuEvent', {
         e,
         partIndex,
-        borderIndex: this.border.config.allBordersIndex,
+        borderIndex: this.borderConfig.allBordersIndex,
       });
     },
     dragTag(pos, type) {
       if (type === 'curve') {
-        const { x, y } = this.border.config;
+        const { x, y } = this.borderConfig;
         const x2 = pos.x;
         const y2 = pos.y;
         const x3 = this.partPosition.x;
@@ -174,13 +175,13 @@ export default {
         const correctAngle = angle - this.params.centerAngle;
         this.$store.commit('setEdgeTagParams', {
           i: this.partIndex,
-          j: this.border.border.allBordersIndex,
+          j: this.borderConfig.allBordersIndex,
           correctAngle,
         });
       } else if (type === 'line') {
         const x2 = pos.x - this.partPosition.x;
         const y2 = pos.y - this.partPosition.y;
-        const pts = this.border.border.pointsInPx;
+        const pts = this.borderConfig.points;
         const vec1 = new Victor(pts[2] - pts[0], pts[3] - pts[1]);
         const vec2 = new Victor(x2 - pts[0], y2 - pts[1]);
         const cos = vec1.dot(vec2) / (vec1.length() * vec2.length());
@@ -196,7 +197,7 @@ export default {
         }
         this.$store.commit('setEdgeTagParams', {
           i: this.partIndex,
-          j: this.border.border.allBordersIndex,
+          j: this.borderConfig.allBordersIndex,
           correctDistance,
         });
       }

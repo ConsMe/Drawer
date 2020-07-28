@@ -3,22 +3,23 @@
     <v-arc
       :config="{
         ...config,
-        stroke: [currentElId, selectedElId].includes(border.id) || selectedElId === part.id
-          ? selectedColor : 'black',
+        stroke,
       }"
       ref="border"
       @contextmenu="setContextMenuEvent($event, config.allBordersIndex)"
       @mouseover="$store.commit('setCurrentEl', border.id)"
       @mouseleave="$store.commit('setCurrentEl', null)"
       @click="$store.commit('setSelectedElId', border.id)" />
-    <edge
-      v-if="border.edgeTag.isShown"
-      :border="{ border, config }"
+    <edge-tag
+      v-if="border.edgeTag && border.edgeTag.isShown"
+      :border="border"
+      :borderConfig="config"
       :partIndex="partIndex"
       :part="part" />
     <radius-tag
-      v-if="border.radiusTag.isShown"
-      :border="{ border, config }"
+      v-if="border.radiusTag && border.radiusTag.isShown"
+      :border="border"
+      :borderConfig="config"
       :partIndex="partIndex"
       :part="part" />
   </div>
@@ -26,37 +27,54 @@
 
 <script>
 // import Victor from 'victor';
-import Edge from './Edge.vue';
+import EdgeTag from './EdgeTag.vue';
 import RadiusTag from './RadiusTag.vue';
 
 export default {
-  props: ['border', 'part', 'partIndex', 'curves'],
+  props: ['partIndex', 'curves', 'borderIndex'],
   components: {
-    Edge, RadiusTag,
+    EdgeTag, RadiusTag,
   },
   computed: {
     selectedElId() { return this.$store.state.selectedElId; },
     currentElId() { return this.$store.state.currentElId; },
     pxPerMm() { return this.$store.state.pxPerMm; },
+    part() { return this.$store.state.parts.partsInit[this.partIndex]; },
+    border() { return this.part.borders[this.borderIndex]; },
     partPosition() { return this.part.position; },
     selectedColor() { return this.$store.state.selectedColor; },
-    config() {
-      const { border } = this;
-      const prev = border.allBordersIndex ? this.part.borders[border.allBordersIndex - 1]
+    points() {
+      const p1 = this.$store.state.parts.partsInit[this.partIndex]
+        .points.find((p) => p.id === this.border.pointsId[0]).c;
+      const p2 = this.$store.state.parts.partsInit[this.partIndex]
+        .points.find((p) => p.id === this.border.pointsId[1]).c;
+      return [...p1, ...p2];
+    },
+    lineJoin() {
+      const prev = this.borderIndex ? this.part.borders[this.borderIndex - 1]
         : this.part.borders[this.part.borders.length - 1];
-      const next = border.allBordersIndex < this.part.borders.length - 1
-        ? this.part.borders[border.allBordersIndex + 1] : this.part.borders[0];
-      const { type, id, points } = border;
-      const c = { ...this.curves[border.id] };
+      const next = this.borderIndex < this.part.borders.length - 1
+        ? this.part.borders[this.borderIndex + 1] : this.part.borders[0];
+      return prev.skirting && next.skirting ? 'round' : 'miter';
+    },
+    stroke() {
+      return [this.currentElId, this.selectedElId].includes(this.border.id)
+        || this.selectedElId === this.part.id ? this.selectedColor : 'black';
+    },
+    config() {
+      this.console.log('curveBorder', this.border.id);
+      const { type, id, isInside } = this.border;
+      const { skirting } = this.border;
+      const c = { ...this.curves[id] };
       return {
         type,
         id,
-        points: points.map((p) => p * this.pxPerMm),
-        isInside: border.isInside,
-        strokeWidth: border.skirting ? 4 : 1,
-        lineJoin: prev.skirting && next.skirting ? 'round' : 'miter',
+        points: this.points.map((p) => p * this.pxPerMm),
+        isInside,
+        strokeWidth: skirting ? 4 : 1,
+        lineJoin: this.lineJoin,
         hitStrokeWidth: 5,
-        allBordersIndex: border.allBordersIndex,
+        allBordersIndex: this.borderIndex,
         innerRadius: c.R,
         outerRadius: c.R,
         x: c.c1.x,
@@ -64,7 +82,6 @@ export default {
         angle: c.ang2 * (180 / Math.PI) - c.ang1 * (180 / Math.PI),
         rotation: c.ang1 * (180 / Math.PI),
         clockwise: c.isInside,
-        radiusTag: border.radiusTag,
       };
     },
   },

@@ -1,16 +1,14 @@
 <template>
   <div>
     <line-border
-      v-for="border in borders.lineBorder"
+      v-for="(border) in borders.lineBorder"
       :key="border.id"
-      :border="border"
-      :part="part"
+      :borderIndex="border.allBordersIndex"
       :partIndex="partIndex" />
     <curve-border
       v-for="border in borders.curveBorder"
       :key="border.id"
-      :border="border"
-      :part="part"
+      :borderIndex="border.allBordersIndex"
       :partIndex="partIndex"
       :curves="curves" />
   </div>
@@ -18,13 +16,15 @@
 
 <script>
 import Victor from 'victor';
+import toastr from 'toastr';
 import getId from '../../mixins/getId';
 import LineBorder from './LineBorder.vue';
 import CurveBorder from './CurveBorder.vue';
+import confirmModal from '../../modules/ConfirmModal';
 
 export default {
   mixins: [getId],
-  props: ['part', 'partIndex', 'curves', 'shape'],
+  props: ['part', 'partIndex', 'curves'],
   components: {
     LineBorder, CurveBorder,
   },
@@ -74,26 +74,71 @@ export default {
         };
         this.$store.commit('setEdgeTagParams', payload);
         this.$store.commit('addLog');
+      } else if (data.action === 'addPoint') {
+        this.addPoint(data);
+      } else if (data.action === 'showRadius') {
+        this.$store.commit('setRadiusTagParams', {
+          i: data.partIndex,
+          j: data.borderIndex,
+          isShown: true,
+        });
+        this.$store.commit('addLog');
       }
     },
     refreshSelectedElTrigger() {
       this.$refs[`border${this.selectedElId}`][0].getNode().fire('click');
     },
+    // borders: {
+    //   handler() {
+    //     console.log('allborders');
+    //   },
+    //   deep: true,
+    // },
   },
   methods: {
     setContextMenuEvent(e, index) {
       const { partIndex } = this;
       this.$store.commit('setContextMenuEvent', { e, partIndex, borderIndex: index });
     },
-    makeBorderCurve(data) {
-      const pts = this.clone(this.part.borders[data.borderIndex].points);
+    async makeBorderCurve(data) {
+      const { points } = this.part;
+      const border = this.part.borders[data.borderIndex];
+      const p1 = points[border.pointsIndexes[0]].c;
+      const p2 = points[border.pointsIndexes[1]].c;
+      const pts = [...p1, ...p2];
       const borderLength = Math.sqrt((pts[2] - pts[0]) ** 2 + (pts[3] - pts[1]) ** 2);
-      const radius = data.isInside ? borderLength : borderLength / 2 + 2;
+      let payload = {
+        body: `Введите отступ ${data.isInside ? 'вогнутой' : 'выпуклой'} от прямой`,
+        title: `Сделать ${data.isInside ? 'вогнутой' : 'выпуклой'}`,
+      };
+      payload = {
+        ...payload,
+        input: {
+          type: 'number',
+          placeholder: `отступ в мм, максимум ${Math.ceil(borderLength / 2)}`,
+        },
+      };
+      payload.actions = [
+        { action: '0', style: 'secondary', text: 'Отмена' },
+        { action: '1', style: 'primary', text: 'Применить' },
+      ];
+      const confirmation = await confirmModal(payload);
+      if (!confirmation) return;
+      const margin = parseInt(confirmation, 10);
+      if (Number.isNaN(margin) || !margin || margin > borderLength / 2) {
+        toastr.warning('Отступ введен неверно');
+        return;
+      }
+      const radius = ((borderLength / 2) ** 2 + (margin ** 2)) / (2 * margin);
       this.$store.dispatch('makeBorderCurve', Object.assign(data, { radius }));
       this.$store.commit('addLog');
     },
     makeBulgeInset(data) {
-      const pts = this.clone(this.part.borders[data.borderIndex].points);
+      const { points } = this.part;
+      const border = this.part.borders[data.borderIndex];
+      const p1 = points[border.pointsIndexes[0]].c;
+      const p2 = points[border.pointsIndexes[1]].c;
+      const pts = [...p1, ...p2];
       const newPoints = [];
       const depth = 300;
       const k = data.isInside ? 1 : -1;
@@ -118,37 +163,37 @@ export default {
       const pointsId = [];
       const insetBulgeId = this.getId();
       newPoints.forEach((p, index) => {
-        const border = { id: this.getId(), type: 'lineBorder', sizeTag: { isShown: true } };
+        const newBorder = { id: this.getId(), type: 'lineBorder' };
         if (index < 3) border.subType = subType;
-        this.$store.commit('addBorder', {
-          partIndex,
-          borderIndex: borderIndex + index + 1,
-          border,
-        });
         const newPointId = this.getId();
         const point = { id: newPointId, c: p, subType };
-        this.$store.commit('addPoint', {
-          partIndex,
-          pointIndex: borderIndex + index + 1,
+        this.$store.dispatch('addPoint', {
+          i: partIndex,
+          j: borderIndex + index + 1,
           point: { ...point, insetBulgeId },
+          border: newBorder,
         });
         pointsId.push(newPointId);
       });
       const insetBulge = { partIndex, pointsId, id: insetBulgeId };
-      this.$store.commit('addInsetBulge', { ...insetBulge, type: subType, depth });
+      this.$store.dispatch('addInsetBulge', { ...insetBulge, type: subType, depth });
       this.$store.commit('setSelectedElId', insetBulgeId);
       this.$store.commit('addLog');
     },
-    checkOtherLinesLength(p1, p2) {
-      const stage = this.shape.getNode().getStage();
-      const inter1 = stage.getIntersection({ x: p1.x * this.pxPerMm, y: p1.y * this.pxPerMm });
-      const inter2 = stage.getIntersection({ x: p2.x * this.pxPerMm, y: p2.y * this.pxPerMm });
-      console.log(inter1, inter2);
-      // if (!inter1 || inter1.attrs.id !== this.part.id) return false;
-      // if (!inter2 || inter2.attrs.id !== this.part.id) return false;
-      // if (!inter1 || inter1.attrs.type !== 'part') return false;
-      // if (!inter2 || inter2.attrs.type !== 'part') return false;
-      return true;
+    addPoint(data) {
+      const index = data.borderIndex;
+      const pt1 = this.part.points[index].c;
+      const pt2 = index < this.part.points.length - 1
+        ? this.part.points[index + 1].c : this.part.points[0].c;
+      const pt3 = [pt1[0] + (pt2[0] - pt1[0]) / 2, pt1[1] + (pt2[1] - pt1[1]) / 2];
+      const { partIndex } = data;
+      this.$store.dispatch('addPoint', {
+        i: partIndex,
+        j: index + 1,
+        border: { id: this.getId(), type: 'lineBorder' },
+        point: { id: this.getId(), c: pt3, addedByUser: true },
+      });
+      this.$store.commit('addLog');
     },
   },
 };

@@ -6,6 +6,7 @@ export default {
   state: {
     partsInit: [],
     totalTexts: [],
+    legends: [],
     boundingBoxes: [],
     refreshSelectedElTrigger: 0,
     defaultEdgeType: 'empty',
@@ -52,6 +53,11 @@ export default {
           type = 'texts';
           j = part.texts.findIndex((p) => p.id === id);
         }
+        if (j < 0 && part.singleSizeTags && part.singleSizeTags.length) {
+          subType = null;
+          type = 'singleSizeTags';
+          j = part.singleSizeTags.findIndex((p) => p.id === id);
+        }
         if (j < 0) return false;
         selectedEl = { i, j, el: subType ? part[type][j][subType] : part[type][j] };
         return true;
@@ -59,6 +65,10 @@ export default {
       if (!Object.keys(selectedEl).length && state.totalTexts.length) {
         const index = state.totalTexts.findIndex((t) => t.id === id);
         if (index >= 0) selectedEl = { i: index, el: state.totalTexts[index] };
+      }
+      if (!Object.keys(selectedEl).length && state.legends.length) {
+        const index = state.legends.findIndex((t) => t.id === id);
+        if (index >= 0) selectedEl = { i: index, el: state.legends[index] };
       }
       return selectedEl;
     },
@@ -70,19 +80,19 @@ export default {
     movePoint(state, { partIndex, pointIndex, c }) {
       Vue.set(state.partsInit[partIndex].points[pointIndex], 'c', c);
     },
-    addPoint(state, { partIndex, pointIndex, point }) {
-      state.partsInit[partIndex].points.splice(pointIndex, 0, point);
+    addPoint(state, payload) {
+      const { i, j, point } = payload;
+      const { border } = payload;
+      border.sizeTag = { isShown: true };
+      border.edgeTag = { isShown: false };
+      point.angleTag = { isShown: false };
+      state.partsInit[i].points.splice(j, 0, point);
+      state.partsInit[i].borders.splice(j, 0, border);
     },
-    addBorder(state, { partIndex, borderIndex, border }) {
-      const sizeTag = border.sizeTag || { isShown: true };
-      state.partsInit[partIndex].borders.splice(borderIndex, 0, { ...border, sizeTag });
-    },
-    deleteBorder(state, { partIndex, borderIndex }) {
-      state.partsInit[partIndex].borders.splice(borderIndex, 1);
-    },
-    deletePoint(state, { partIndex, pointIndex }) {
-      state.partsInit[partIndex].borders.splice(pointIndex, 1);
-      state.partsInit[partIndex].points.splice(pointIndex, 1);
+    deletePoint(state, { i, j }) {
+      state.partsInit[i].points.splice(j, 1);
+      const borderIndex = j > 0 ? j - 1 : state.partsInit[i].borders.length - 1;
+      state.partsInit[i].borders.splice(borderIndex, 1);
     },
     makeBorderCurve(state, data) {
       const { partIndex, borderIndex, radius } = data;
@@ -109,16 +119,17 @@ export default {
     },
     addInsetBulge(state, payload) {
       const { partIndex, ...params } = payload;
-      const insetsBulges = state.partsInit[partIndex].insetsBulges || [];
-      params.points = [];
-      insetsBulges.push({ ...params, pointsInPx: [], type: payload.type });
-      Vue.set(state.partsInit[partIndex], 'insetsBulges', insetsBulges);
+      const iB = { ...params, type: payload.type, pointsIndexes: [] };
+      // const insetsBulges = state.partsInit[partIndex].insetsBulges || [];
+      // insetsBulges.push({ ...params, type: payload.type });
+      // Vue.set(state.partsInit[partIndex], 'insetsBulges', insetsBulges);
+      state.partsInit[partIndex].insetsBulges.push(iB);
     },
     setInsetBulgeDepth(state, { i, j, depth }) {
       Vue.set(state.partsInit[i].insetsBulges[j], 'depth', depth);
     },
-    deleteInsetBulge(state, { partIndex, insetBulgeIndex }) {
-      state.partsInit[partIndex].insetsBulges.splice(insetBulgeIndex, 1);
+    deleteInsetBulge(state, { i, j }) {
+      state.partsInit[i].insetsBulges.splice(j, 1);
     },
     refreshSelectedEl(state) {
       setTimeout(() => {
@@ -138,7 +149,7 @@ export default {
       Vue.set(state.partsInit[i].borders[j], 'skirting', !state.partsInit[i].borders[j].skirting);
     },
     setRadiusTagParams(state, { i, j, ...payload }) {
-      Vue.set(state.partsInit[i].borders[j], 'radiusTag', payload);
+      state.partsInit[i].borders[j].radiusTag = payload;
     },
     setEdgeTagParams(state, { i, j, ...payload }) {
       let edgeTag;
@@ -152,7 +163,7 @@ export default {
       if (payload.edgeType) state.defaultEdgeType = payload.edgeType;
     },
     setSizeTagParams(state, { i, j, ...payload }) {
-      Vue.set(state.partsInit[i].borders[j], 'sizeTag', payload);
+      state.partsInit[i].borders[j].sizeTag = payload;
     },
     setAngleTagParams(state, { i, j, ...payload }) {
       Vue.set(state.partsInit[i].points[j], 'angleTag', payload);
@@ -197,8 +208,54 @@ export default {
     setBoundingBox(state, { i, bb }) {
       Vue.set(state.boundingBoxes, i, bb);
     },
+    assignBordersPointsIds(state, partIndex) {
+      const { points, borders, insetsBulges } = state.partsInit[partIndex];
+      points.forEach((point, i) => {
+        const next = i < points.length - 1 ? i + 1 : 0;
+        state.partsInit[partIndex].borders[i].pointsId = [point.id, points[next].id];
+        state.partsInit[partIndex].borders[i].pointsIndexes = [i, next];
+        const prev = i ? i - 1 : points.length - 1;
+        state.partsInit[partIndex].points[i].bordersId = [borders[prev].id, borders[i].id];
+        state.partsInit[partIndex].points[i].bordersIndexes = [prev, i];
+      });
+      insetsBulges.forEach((iB, j) => {
+        const pointsIndexes = iB.pointsId.map((id) => points.findIndex((p) => p.id === id));
+        state.partsInit[partIndex].insetsBulges[j].pointsIndexes = pointsIndexes;
+      });
+    },
+    addSingleSizeTag(state, { i, ...params }) {
+      state.partsInit[i].singleSizeTags.push(params);
+    },
+    setSingleSizeTagParams(state, { i, j, ...params }) {
+      Object.assign(state.partsInit[i].singleSizeTags[j], params);
+    },
+    deleteSingleSizeTag(state, { i, j }) {
+      state.partsInit[i].singleSizeTags.splice(j, 1);
+    },
+    addLegend(state, legend) {
+      state.legends.push(legend);
+    },
+    setLegendParams(state, { i, ...params }) {
+      Object.assign(state.legends[i], params);
+    },
+    deleteLegend(state, { i }) {
+      state.legends.splice(i, 1);
+    },
+    addWashing(state, { i, ...params }) { state.partsInit[i].washings.push(params); },
   },
   actions: {
+    addPart({ commit, state }, part) {
+      commit('addPart', part);
+      commit('assignBordersPointsIds', state.partsInit.length - 1);
+    },
+    addPoint({ commit }, payload) {
+      commit('addPoint', payload);
+      commit('assignBordersPointsIds', payload.i);
+    },
+    deletePoint({ commit }, payload) {
+      commit('deletePoint', payload);
+      commit('assignBordersPointsIds', payload.i);
+    },
     refreshSelectedEl({ commit, rootState }) {
       if (rootState.selectedEl) commit('refreshSelectedEl');
     },
@@ -216,6 +273,14 @@ export default {
       commit('addTextBlock', payload);
       commit('setSelectedElId', payload.id);
       commit('setTextEditMode', true);
+    },
+    addInsetBulge({ commit }, payload) {
+      commit('addInsetBulge', payload);
+      commit('assignBordersPointsIds', payload.partIndex);
+    },
+    deleteInsetBulge({ commit }, payload) {
+      commit('deleteInsetBulge', payload);
+      commit('assignBordersPointsIds', payload.i);
     },
   },
 };

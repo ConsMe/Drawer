@@ -3,11 +3,13 @@
     class="d-inline-block bg-white p-4 position-absolute element-menu"
     v-if="element">
       <line-border-menu v-if="element.type === 'lineBorder'" />
-      <curve-border-menu v-if="element.type === 'curveBorder'" />
-      <inset-bulge-menu v-if="['inset', 'bulge'].includes(element.type)" />
-      <edge-menu v-if="element.type === 'edge'" :initType="element.edgeType" />
-      <part-menu v-if="element.type === 'part'" />
-      <text-menu v-if="['totalText', 'partText'].includes(element.type)" />
+      <curve-border-menu v-else-if="element.type === 'curveBorder'" />
+      <inset-bulge-menu v-else-if="['inset', 'bulge'].includes(element.type)" />
+      <edge-menu v-else-if="element.type === 'edge'" :initType="element.edgeType" />
+      <part-menu v-else-if="element.type === 'part'" />
+      <text-menu v-else-if="['totalText', 'partText'].includes(element.type)" />
+      <single-size-tag-menu v-else-if="element.type === 'singleSizeTag'" />
+      <legend-menu v-else-if="element.type === 'legend'" />
   </div>
 </template>
 
@@ -18,10 +20,19 @@ import InsetBulgeMenu from './InsetBulgeMenu.vue';
 import EdgeMenu from './EdgeMenu.vue';
 import PartMenu from './PartMenu.vue';
 import TextMenu from './TextMenu.vue';
+import SingleSizeTagMenu from './SingleSizeTagMenu.vue';
+import LegendMenu from './LegendMenu.vue';
 
 export default {
   components: {
-    LineBorderMenu, CurveBorderMenu, InsetBulgeMenu, EdgeMenu, PartMenu, TextMenu,
+    LineBorderMenu,
+    CurveBorderMenu,
+    InsetBulgeMenu,
+    EdgeMenu,
+    PartMenu,
+    TextMenu,
+    SingleSizeTagMenu,
+    LegendMenu,
   },
   computed: {
     element() { return this.$store.getters.selectedEl.el; },

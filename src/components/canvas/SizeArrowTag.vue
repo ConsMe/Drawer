@@ -1,6 +1,6 @@
 <template>
   <v-group
-    v-if="border.border.sizeTag.isShown"
+    v-if="sizeTag.isShown"
     ref="group">
     <v-arrow :config="{
       points: params.arrowPoints,
@@ -41,7 +41,7 @@
 import Victor from 'victor';
 
 export default {
-  props: ['border', 'partIndex', 'part'],
+  props: ['border', 'partIndex', 'part', 'borderConfig'],
   data() {
     return {
       over: false,
@@ -50,19 +50,20 @@ export default {
     };
   },
   computed: {
-    sizeTag() { return this.border.border.sizeTag; },
+    sizeTag() { return this.border.sizeTag; },
     isControlPressed() { return this.$store.state.isControlPressed; },
     offsetInMm() {
-      const { sizeTag } = this.border.border;
+      const { sizeTag } = this;
       if ('distance' in sizeTag) return sizeTag.distance;
-      return this.border.border.skirting ? 70 : 50;
+      return this.border.skirting ? 70 : 50;
     },
     pxPerMm() { return this.$store.state.pxPerMm; },
     fontSize() { return this.$store.state.fontSizeInmM.sizeArrow * this.pxPerMm; },
+    borderPoints() { return this.borderConfig.points; },
     params() {
-      // console.log(this.border.border.id);
-      const { points } = this.border.config;
-      const insideK = this.border.border.sizeTag.isInside ? -1 : 1;
+      this.console.log('sizeTag', this.border.id);
+      const points = this.borderPoints;
+      const insideK = this.sizeTag.isInside ? -1 : 1;
       let startVec = new Victor(points[0], points[1]);
       let vec = new Victor(points[2] - points[0], points[3] - points[1]);
       let angle = vec.angleDeg();
@@ -86,7 +87,7 @@ export default {
         .multiply(new Victor(textOffset, textOffset));
       const originalTextPosition = textVec.add(startVec).toObject();
       let textPosition;
-      const { correctPosition } = this.border.border.sizeTag;
+      const { correctPosition } = this.sizeTag;
       let correctX;
       let correctY;
       if (correctPosition) {
@@ -131,7 +132,7 @@ export default {
   watch: {
     contextMenuAction(data) {
       if (data.partIndex !== this.partIndex) return;
-      if (data.borderIndex !== this.border.config.allBordersIndex) return;
+      if (data.borderIndex !== this.borderConfig.allBordersIndex) return;
       if (data.action === 'hideSizeArrow') {
         this.$store.commit('setSizeTagParams', {
           i: data.partIndex,
@@ -154,7 +155,7 @@ export default {
       this.$store.commit('setContextMenuEvent', {
         e,
         partIndex,
-        borderIndex: this.border.config.allBordersIndex,
+        borderIndex: this.borderConfig.allBordersIndex,
       });
     },
     dragTag(pos) {
@@ -165,7 +166,7 @@ export default {
       }
     },
     dragTagStrict(pos) {
-      const pts = this.border.border.pointsInPx;
+      const pts = this.borderConfig.points;
       const x2 = pos.x - this.partPosition.x;
       const y2 = pos.y - this.partPosition.y;
       const vec1 = new Victor(pts[2] - pts[0], pts[3] - pts[1]);
@@ -184,7 +185,7 @@ export default {
       const distance = (sin * vec2.length()) / this.pxPerMm;
       this.$store.commit('setSizeTagParams', {
         i: this.partIndex,
-        j: this.border.border.allBordersIndex,
+        j: this.borderConfig.allBordersIndex,
         distance,
         isInside: angle2 > 0,
         isShown: true,
@@ -196,7 +197,7 @@ export default {
       const { x, y } = this.params.originalTextPosition;
       this.$store.commit('setSizeTagParams', {
         i: this.partIndex,
-        j: this.border.border.allBordersIndex,
+        j: this.borderConfig.allBordersIndex,
         correctPosition: {
           x: (x2 - x) / this.pxPerMm,
           y: (y2 - y) / this.pxPerMm,

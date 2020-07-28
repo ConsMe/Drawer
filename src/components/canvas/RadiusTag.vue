@@ -1,6 +1,6 @@
 <template>
   <v-label
-    v-if="border.border.radiusTag.isShown"
+    v-if="border.radiusTag.isShown"
     ref="label"
     :config="{
       ...params.textPosition,
@@ -29,7 +29,7 @@
 import Victor from 'victor';
 
 export default {
-  props: ['border', 'partIndex', 'part'],
+  props: ['border', 'partIndex', 'part', 'borderConfig'],
   data() {
     return {
       over: false,
@@ -42,10 +42,11 @@ export default {
     pxPerMm() { return this.$store.state.pxPerMm; },
     fontSize() { return this.$store.state.fontSizeInmM.radius * this.pxPerMm; },
     params() {
-      const { x, y } = this.border.config;
-      const correctAngle = this.border.border.radiusTag.correctAngle || 0;
-      const correctDistance = this.border.border.radiusTag.correctDistance || 0;
-      const pts = this.border.config.points;
+      this.console.log('radiusTag', this.border.id);
+      const { x, y } = this.borderConfig;
+      const correctAngle = this.border.radiusTag.correctAngle || 0;
+      const correctDistance = this.border.radiusTag.correctDistance || 0;
+      const pts = this.borderConfig.points;
       let startVec = new Victor(pts[0], pts[1]);
       let vec = new Victor(pts[2] - pts[0], pts[3] - pts[1]);
       let originalAngle = vec.angleDeg();
@@ -57,14 +58,14 @@ export default {
       startVec = new Victor(x, y);
       vec = new Victor(halfPoint.x - x, halfPoint.y - y);
       const centerAngle = vec.angleDeg();
-      const isInsideK = this.border.border.isInside ? 1 : -1;
-      const originalDistance = this.border.config.innerRadius
+      const isInsideK = this.border.isInside ? 1 : -1;
+      const originalDistance = this.borderConfig.innerRadius
         - this.offsetInMm * this.pxPerMm * isInsideK;
       const textDistance = originalDistance + correctDistance * this.pxPerMm;
       vec = vec.norm().rotateDeg(correctAngle).multiply(new Victor(textDistance, textDistance));
       const textPosition = vec.clone().add(startVec).toObject();
       const halfFontSize = this.fontSize / 2;
-      const radiusText = `R ${Math.round(this.border.border.radius)}`;
+      const radiusText = `R ${Math.round(this.border.radius)}`;
       const offset = {
         x: (halfFontSize * radiusText.length) / 2,
         y: halfFontSize,
@@ -91,13 +92,11 @@ export default {
   watch: {
     contextMenuAction(data) {
       if (data.partIndex !== this.partIndex) return;
-      if (data.borderIndex !== this.border.config.allBordersIndex) return;
-      if (['hide', 'showRadius'].includes(data.action)) {
-        const radiusTag = data.action === 'hide' ? {} : { isShown: true };
+      if (data.borderIndex !== this.borderConfig.allBordersIndex) return;
+      if (data.action === 'hide') {
         this.$store.commit('setRadiusTagParams', {
           i: data.partIndex,
           j: data.borderIndex,
-          ...radiusTag,
         });
         this.$store.commit('addLog');
       }
@@ -116,11 +115,11 @@ export default {
       this.$store.commit('setContextMenuEvent', {
         e,
         partIndex,
-        borderIndex: this.border.config.allBordersIndex,
+        borderIndex: this.borderConfig.allBordersIndex,
       });
     },
     dragTag(pos) {
-      const { x, y } = this.border.config;
+      const { x, y } = this.borderConfig;
       const x2 = pos.x;
       const y2 = pos.y;
       const x3 = this.partPosition.x;
@@ -131,7 +130,7 @@ export default {
       const correctDistance = vec.length() / this.pxPerMm - this.params.originalDistance;
       this.$store.commit('setRadiusTagParams', {
         i: this.partIndex,
-        j: this.border.border.allBordersIndex,
+        j: this.borderConfig.allBordersIndex,
         correctAngle,
         correctDistance,
         isShown: true,

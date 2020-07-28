@@ -41,7 +41,7 @@
 import Victor from 'victor';
 
 export default {
-  props: ['point', 'partIndex', 'pointIndex', 'part'],
+  props: ['point', 'partIndex', 'pointIndex'],
   data() {
     return {
       over: false,
@@ -51,17 +51,22 @@ export default {
   computed: {
     pxPerMm() { return this.$store.state.pxPerMm; },
     fontSize() { return this.$store.state.fontSizeInmM.radius * this.pxPerMm; },
+    part() { return this.$store.state.parts.partsInit[this.partIndex]; },
     params() {
+      this.console.log('angleTag', this.point.id);
       const distance = this.point.angleTag.distance || 0;
-      const border1 = this.part.borders.find((b) => b.id === this.point.bordersId[1]);
-      const border2 = this.part.borders.find((b) => b.id === this.point.bordersId[0]);
-      let pts = border1.pointsInPx;
+      const { borders, points } = this.part;
+      const border1 = borders[this.point.bordersIndexes[0]];
+      const border2 = borders[this.point.bordersIndexes[1]];
+      let pts = [...points[border1.pointsIndexes[0]].c, ...this.point.c]
+        .map((p) => p * this.pxPerMm);
       const startVec = new Victor(pts[2], pts[3]);
       const vec1 = new Victor(pts[0] - pts[2], pts[1] - pts[3]);
       const offsetVec = this.offsetInMm * this.pxPerMm;
       let vec = vec1.clone().norm().multiply(new Victor(offsetVec, offsetVec));
       const p1Vec = vec.add(startVec);
-      pts = border2.pointsInPx;
+      pts = [...this.point.c, ...points[border2.pointsIndexes[1]].c]
+        .map((p) => p * this.pxPerMm);
       const vec2 = new Victor(pts[2] - pts[0], pts[3] - pts[1]);
       vec = vec2.clone().norm().multiply(new Victor(offsetVec, offsetVec));
       const p2Vec = vec.add(startVec);
@@ -125,12 +130,11 @@ export default {
     contextMenuAction(data) {
       if (data.partIndex !== this.partIndex) return;
       if (data.pointIndex !== this.pointIndex) return;
-      if (['hide', 'showAngle'].includes(data.action)) {
-        const angleTag = data.action === 'hide' ? {} : { isShown: true, isOutside: false };
+      if (data.action === 'hideAngle') {
         this.$store.commit('setAngleTagParams', {
           i: data.partIndex,
           j: data.pointIndex,
-          ...angleTag,
+          angleTag: {},
         });
         this.$store.commit('addLog');
       }

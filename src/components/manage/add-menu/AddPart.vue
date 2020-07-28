@@ -39,11 +39,19 @@ export default {
         position: { x: 0, y: 0 },
         type: 'part',
         fill: null,
+        insetsBulges: [],
+        texts: [],
+        singleSizeTags: [],
+        washings: [],
         points: [
-          { id: this.getId(), c: startPoint },
-          { id: this.getId(), c: [startPoint[0] + widthInMm, startPoint[1]] },
-          { id: this.getId(), c: [startPoint[0] + widthInMm, startPoint[1] + heightInMm] },
-          { id: this.getId(), c: [startPoint[0], startPoint[1] + heightInMm] },
+          { id: this.getId(), c: startPoint, angleTag: {} },
+          { id: this.getId(), c: [startPoint[0] + widthInMm, startPoint[1]], angleTag: {} },
+          {
+            id: this.getId(),
+            c: [startPoint[0] + widthInMm, startPoint[1] + heightInMm],
+            angleTag: {},
+          },
+          { id: this.getId(), c: [startPoint[0], startPoint[1] + heightInMm], angleTag: {} },
         ],
       };
       part.borders = part.points.map(() => (
@@ -54,7 +62,7 @@ export default {
           radiusPosition: 'usual',
         }
       ));
-      this.$store.commit('addPart', part);
+      this.$store.dispatch('addPart', part);
       this.$store.commit('addLog');
     },
   },
