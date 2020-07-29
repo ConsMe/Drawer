@@ -23,7 +23,7 @@ export default new Vuex.Store({
       text: 90,
     },
     files: { edges: {}, fills: {}, washings: {} },
-    logs: [{ parts: [], totalTexts: [] }],
+    logs: [{ parts: [], totalTexts: [], legends: [] }],
     logStep: 0,
     dash: [1, 2],
     selectedColor: '#536dfe',
@@ -58,11 +58,12 @@ export default new Vuex.Store({
     setCursor(state, cursor) { state.cursor = cursor; },
     resetCursor(state) { state.cursor = 'default'; },
     addLog(state) {
-      state.logs.push({
+      state.logStep += 1;
+      state.logs[state.logStep] = {
         parts: clone(state.parts.partsInit),
         totalTexts: clone(state.parts.totalTexts),
-      });
-      state.logStep += 1;
+        legends: clone(state.parts.legends),
+      };
       state.logs.splice(state.logStep + 1);
     },
     logBack(state) {
@@ -70,6 +71,7 @@ export default new Vuex.Store({
       state.contextMenuEvent = null;
       state.parts.partsInit = clone(state.logs[state.logStep - 1].parts);
       state.parts.totalTexts = clone(state.logs[state.logStep - 1].totalTexts);
+      state.parts.legends = clone(state.logs[state.logStep - 1].legends);
       state.logStep -= 1;
     },
     logForward(state) {
@@ -78,6 +80,7 @@ export default new Vuex.Store({
       state.logStep += 1;
       state.parts.partsInit = clone(state.logs[state.logStep].parts);
       state.parts.totalTexts = clone(state.logs[state.logStep].totalTexts);
+      state.parts.legends = clone(state.logs[state.logStep].legends);
     },
     setTextEditMode(state, isTextEditMode) { state.isTextEditMode = isTextEditMode; },
   },

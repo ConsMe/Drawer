@@ -1,5 +1,5 @@
 <template>
-  <div style="border: 1px solid; margin-bottom: 300px;" class="position-relative">
+  <div style="margin-bottom: 300px;" class="position-relative">
     <div ref="nocontext">
       <context-menu />
       <v-stage
@@ -12,10 +12,15 @@
         <v-layer>
           <v-rect
             :config="{
+              x: 0,
+              y: 0,
               width: canvasWidthInPx,
               height: 500,
               fill: 'white',
-              type: 'bgRect'
+              type: 'bgRect',
+              fillPatternImage: bgPattern,
+              fillPriority: 'pattern',
+              fillPatternScale: { x: 0.35, y: 0.35 },
             }"
             @click="deselect" />
           <part
@@ -54,6 +59,7 @@ import TextEdit from '../manage/TextEdit.vue';
 import TotalText from './TotalText.vue';
 import Legends from './Legend.vue';
 import AddWashing from '../manage/add-menu/AddWashing.vue';
+import fills from '../../modules/fills';
 
 export default {
   mixins: [getId],
@@ -67,6 +73,7 @@ export default {
         placeholder: 'Введите текст',
       },
       addWashingTrigger: {},
+      bgPattern: null,
     };
   },
   computed: {
@@ -137,6 +144,7 @@ export default {
     this.$store.commit('addLog');
     $(this.$refs.nocontext).on('contextmenu', (e) => e.preventDefault());
     this.$store.commit('setStage', this.$refs.stage.getNode());
+    this.bgPattern = fills({ type: 'square', color: 'rgb(235,235,235)' });
     window.addEventListener('keypress', (e) => {
       if (e.code !== 'Delete' || !this.selectedEl.el) return;
       let action;

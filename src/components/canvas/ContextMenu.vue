@@ -271,6 +271,14 @@ export default {
               legendIndex: this.contextMenuEvent.legendIndex,
             },
           ];
+        case 'washing':
+          return [
+            {
+              name: 'Удалить мойку',
+              action: 'deleteWashing',
+              washingIndex: this.contextMenuEvent.washingIndex,
+            },
+          ];
         default:
           return [];
       }

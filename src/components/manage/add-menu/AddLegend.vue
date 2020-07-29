@@ -105,6 +105,7 @@ export default {
         y: this.canvasHeightInMm * 0.8,
         sizeK: 1.6,
       });
+      this.$store.commit('addLog');
     },
   },
 };

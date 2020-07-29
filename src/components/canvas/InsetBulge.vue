@@ -5,7 +5,9 @@
         ...config,
         strokeWidth: [currentElId, selectedElId].includes(iB.id) ? 2 : 0,
       }"
+      ref="iB"
       @dragstart="startIBDrag"
+      @dragend="dragend"
       @mouseover="$store.commit('setCurrentEl', iB.id)"
       @mouseleave="$store.commit('setCurrentEl', null)"
       @click="$store.commit('setSelectedElId', iB.id)"
@@ -83,6 +85,7 @@ export default {
       new Array(4).fill('').forEach(() => {
         this.$store.dispatch('deletePoint', { i: partIndex, j: pointsIndexes[0] });
       });
+      this.$store.commit('addLog');
     },
     startIBDrag(e) {
       this.isCtrlKey = e.evt.ctrlKey;
@@ -116,6 +119,10 @@ export default {
           point: new Victor(pts2[index * 2], pts2[index * 2 + 1]).add(dopVec).toObject(),
         });
       });
+    },
+    dragend() {
+      this.$refs.iB.getNode().clearCache();
+      this.$store.commit('addLog');
     },
   },
 };

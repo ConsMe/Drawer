@@ -44,7 +44,8 @@
         draggable: true,
         dragBoundFunc: dragPointFunc,
       }"
-      @dragstart="dragstart($event, 1)"  />
+      @dragstart="dragstart($event, 1)"
+      @dragend="dragend"  />
     <v-circle
       :config="{
         ...circles,
@@ -53,7 +54,8 @@
         draggable: true,
         dragBoundFunc: dragPointFunc,
       }"
-      @dragstart="dragstart($event, 2)"  />
+      @dragstart="dragstart($event, 2)"
+      @dragend="dragend"  />
   </v-group>
 </template>
 

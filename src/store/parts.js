@@ -242,6 +242,10 @@ export default {
       state.legends.splice(i, 1);
     },
     addWashing(state, { i, ...params }) { state.partsInit[i].washings.push(params); },
+    setWashingParams(state, { i, j, ...params }) {
+      Object.assign(state.partsInit[i].washings[j], params);
+    },
+    deleteWashing(state, { i, j }) { state.partsInit[i].washings.splice(j, 1); },
   },
   actions: {
     addPart({ commit, state }, part) {

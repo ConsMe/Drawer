@@ -62,6 +62,15 @@ export default (params) => {
         </svg>
       `;
       break;
+    case 'square':
+      svg = `
+        <svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'>
+          <style>svg { background-color: white; }</style>
+          <rect x='10' y='0' width='2' height='20' fill='${color}' />
+          <rect x='0' y='10' width='20' height='2' fill='${color}' />
+        </svg>
+      `;
+      break;
     default:
       return null;
   }

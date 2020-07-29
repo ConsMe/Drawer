@@ -25,21 +25,6 @@ export default {
     selectedEl() { return this.$store.getters.selectedEl; },
     fontSizeK() { return this.selectedEl.el.fontSizeK; },
   },
-  watch: {
-    fill(fill) {
-      this.$store.commit('setPartFill', {
-        fill,
-        i: this.selectedEl.i,
-      });
-      this.$store.commit('addLog');
-    },
-    selectedEl(selectedEl) {
-      if (selectedEl.el.fill !== this.fill) this.fill = this.selectedEl.el.fill;
-    },
-  },
-  mounted() {
-    this.fill = this.selectedEl.el.fill;
-  },
   methods: {
     setFontSize(i) {
       if (this.fontSizeK === this.sizes[i]) return;

@@ -186,7 +186,9 @@ export default {
     },
     dragend() {
       this.$refs.border.getNode().clearCache();
-      this.$store.commit('addLog');
+      setTimeout(() => {
+        this.$store.commit('addLog');
+      }, 0);
     },
     changeMouseOver(isOver, borderId) {
       const id = isOver ? borderId : null;
