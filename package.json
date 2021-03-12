@@ -16,7 +16,7 @@
     "core-js": "^3.6.5",
     "fabric": "^3.6.3",
     "jquery": "^3.5.1",
-    "jspdf": "^1.5.3",
+    "jspdf": "^2.3.1",
     "konva": "^6.0.0",
     "point-in-polygon": "^1.0.1",
     "point-in-polygon-hao": "0.0.7",
